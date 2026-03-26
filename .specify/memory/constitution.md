@@ -59,4 +59,6 @@ Follow-up TODOs:
 変更を加える場合は、バージョンを更新し、変更理由を明確にすること。
 すべての実装および設計は、上記のCore Principles（特にSafety FirstとPragmatism）に準拠しているかレビューされる必要がある。
 
-**Version**: 1.0.0 | **Ratified**: 2026-03-26 | **Last Amended**: 2026-03-26
+**Language Requirement**: All project documentation, specifications, plans, and tasks MUST be written in Japanese (日本語). AI agents must output all generated artifacts in Japanese.
+
+**Version**: 1.0.1 | **Ratified**: 2026-03-26 | **Last Amended**: 2026-03-26
