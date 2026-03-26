@@ -26,6 +26,10 @@
 @rem Set local scope for the variables with windows NT shell
 if "%OS%"=="Windows_NT" setlocal
 
+@rem Default JAVA_HOME for this project (Android Studio bundled JBR on this machine).
+@rem Overridden by any externally set JAVA_HOME.
+if not defined JAVA_HOME set JAVA_HOME=C:\Program Files\Android\Android Studio\jbr
+
 set DIRNAME=%~dp0
 if "%DIRNAME%"=="" set DIRNAME=.
 @rem This is normally unused

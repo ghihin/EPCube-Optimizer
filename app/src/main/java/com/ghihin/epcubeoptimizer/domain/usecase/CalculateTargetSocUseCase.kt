@@ -5,8 +5,9 @@ import com.ghihin.epcubeoptimizer.domain.model.TargetSOC
 import com.ghihin.epcubeoptimizer.domain.model.UserSchedule
 import com.ghihin.epcubeoptimizer.domain.model.WeatherForecast
 import java.time.LocalDate
+import javax.inject.Inject
 
-class CalculateTargetSocUseCase {
+class CalculateTargetSocUseCase @Inject constructor() {
 
     operator fun invoke(
         forecast: WeatherForecast,

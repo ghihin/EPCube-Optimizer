@@ -2,7 +2,22 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.serialization")
+    id("com.google.dagger.hilt.android")
+    id("com.google.devtools.ksp")
 }
+
+// local.properties から APIキーを読み込む
+// Kotlin DSL では java.util が参照できないため File を直読みしてパースする
+fun readLocalProperty(key: String): String {
+    val localPropsFile = rootProject.file("local.properties")
+    if (!localPropsFile.exists()) return ""
+    return localPropsFile.readLines()
+        .firstOrNull { it.startsWith("$key=") }
+        ?.substringAfter("=")
+        ?.trim()
+        ?: ""
+}
+val openWeatherMapApiKey: String = readLocalProperty("OPEN_WEATHER_MAP_API_KEY")
 
 android {
     namespace = "com.ghihin.epcubeoptimizer"
@@ -19,6 +34,9 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // local.properties の OPEN_WEATHER_MAP_API_KEY を BuildConfig に埋め込む
+        buildConfigField("String", "OPEN_WEATHER_MAP_API_KEY", "\"$openWeatherMapApiKey\"")
     }
 
     buildTypes {
@@ -31,14 +49,15 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "11"
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.4"
@@ -77,6 +96,14 @@ dependencies {
     
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+    // Hilt
+    implementation("com.google.dagger:hilt-android:2.48")
+    ksp("com.google.dagger:hilt-compiler:2.48")
+    implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
+
+    // ViewModel
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
