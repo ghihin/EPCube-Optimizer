@@ -1,0 +1,96 @@
+# Feature Specification: SOC Optimization and Automation
+
+**Feature Branch**: `001-soc-optimization`  
+**Created**: 2026-03-26  
+**Status**: Draft  
+**Input**: User description: "EP CUBEの深夜充電最適化を実現するための、以下の2つのコアモジュールを設計してください..."
+
+## User Scenarios & Testing *(mandatory)*
+
+### User Story 1 - 晴れ・出社日の深夜充電最小化 (Priority: P1)
+
+ユーザーが翌日「出社」予定で、天気予報が「晴れ」の場合、システムは深夜の充電量を最小限に抑える設定を自動で行う。
+
+**Why this priority**: 太陽光発電の余剰電力を最大限活用し、電力購入を最小限に抑えるという本システムの最も基本的な価値（電気代削減）を提供するコア機能であるため。
+
+**Independent Test**: 天気APIのモック（晴れ）とユーザー設定（出社）を与えた際に、SOC Decision Engineが最小充電率を算出し、Accessibility ControllerがEP CUBEアプリ上でその数値を設定・保存できることを確認する。
+
+**Acceptance Scenarios**:
+
+1. **Given** 翌日の天気予報が「晴れ」で、ユーザーのスケジュール設定が「出社」である, **When** 定時（例: 23:30）のバッチ処理が実行される, **Then** 目標充電率（Target SOC）が最小値として算出される
+2. **Given** 目標充電率が最小値として算出された, **When** Accessibility Controllerが起動する, **Then** EP CUBEアプリが開き、深夜充電設定が最小値に変更され、保存される
+3. **Given** 設定変更が完了した, **When** 処理が終了する, **Then** 成功ログが記録され、FCM等でユーザーに通知される
+
+---
+
+### User Story 2 - 雨/曇り・在宅日の深夜充電最大化 (Priority: P1)
+
+ユーザーが翌日「在宅」予定で、天気予報が「雨」または「曇り」の場合、システムは深夜の充電量を最大限に増やす設定を自動で行う。
+
+**Why this priority**: 太陽光発電が見込めず、かつ日中の電力消費が多い日に、安価な深夜電力を最大限活用して昼間の高い電力購入を回避するという、もう一つの重要な経済的価値を提供するため。
+
+**Independent Test**: 天気APIのモック（雨/曇り）とユーザー設定（在宅）を与えた際に、SOC Decision Engineが最大充電率を算出し、Accessibility ControllerがEP CUBEアプリ上でその数値を設定・保存できることを確認する。
+
+**Acceptance Scenarios**:
+
+1. **Given** 翌日の天気予報が「雨」または「曇り」で、ユーザーのスケジュール設定が「在宅」である, **When** 定時（例: 23:30）のバッチ処理が実行される, **Then** 目標充電率（Target SOC）が最大値として算出される
+2. **Given** 目標充電率が最大値として算出された, **When** Accessibility Controllerが起動する, **Then** EP CUBEアプリが開き、深夜充電設定が最大値に変更され、保存される
+
+---
+
+### User Story 3 - エラー発生時の安全な停止と通知 (Priority: P2)
+
+APIの取得失敗、アプリのUI変更による操作失敗など、予期せぬエラーが発生した場合、システムは安全に処理を中断し、ユーザーに通知する。
+
+**Why this priority**: Constitutionの「Safety First」原則に従い、誤った設定による不利益（電気代高騰やバッテリー枯渇）を防ぐため。
+
+**Independent Test**: ネットワーク切断状態や、EP CUBEアプリのダミー画面（UI要素が見つからない状態）で処理を開始し、システムがリトライ後に安全に停止し、エラー通知を送信することを確認する。
+
+**Acceptance Scenarios**:
+
+1. **Given** OpenWeatherMap APIがタイムアウトする, **When** 天気情報の取得を試みる, **Then** 指定回数リトライ後、処理を中断し、エラーログと通知を送信する
+2. **Given** EP CUBEアプリのアップデートにより設定画面のUI要素が見つからない, **When** Accessibility Controllerが設定を変更しようとする, **Then** タイムアウト後に操作を中断し、エラーログと通知を送信する
+
+### Edge Cases
+
+- 天気予報APIが一時的にダウンしている場合、どのようにフォールバックするか？（例：前日の設定を維持する、または安全なデフォルト値にする）
+- ユーザーが手動でEP CUBEアプリを操作中に、定時バッチ処理が開始された場合、競合をどう防ぐか？
+- 端末の画面ロックがかかっている状態でも、Accessibility Serviceは正常にUI操作を行えるか？
+
+## Requirements *(mandatory)*
+
+### Functional Requirements
+
+- **FR-001**: システムは、OpenWeatherMap API等の外部サービスから翌日の天気予報（日照予測または降水確率）を取得できなければならない。
+- **FR-002**: システムは、ユーザーの翌日のスケジュール（出社/在宅）を保持・参照できなければならない。
+- **FR-003**: SOC Decision Engineは、天気予報とスケジュールに基づき、目標充電率（Target SOC）を算出できなければならない。
+  - 晴れ × 出社 -> 最小限の深夜充電
+  - 雨・曇り × 在宅 -> 最大限の深夜充電
+- **FR-004**: システムは、WorkManager等を利用し、毎日指定時刻（例：23:30）にバックグラウンドで処理を自動開始できなければならない。
+- **FR-005**: Accessibility Controllerは、Androidのユーザー補助機能を用いてEP CUBEアプリを起動できなければならない。
+- **FR-006**: Accessibility Controllerは、EP CUBEアプリ内の設定画面へ遷移し、目標充電率の入力（またはスライダー操作）を行い、設定を保存できなければならない。
+- **FR-007**: システムは、ネットワークエラーやUI要素の未発見に対して、リトライ処理と例外処理を行わなければならない。
+- **FR-008**: システムは、処理の成否（設定変更の完了、またはエラーによる中断）をFirebase Cloud Messaging (FCM) やローカルログを用いて記録・通知できなければならない。
+
+### Key Entities *(include if feature involves data)*
+
+- **WeatherForecast**: 翌日の天気情報（天気種別、降水確率、日照時間予測など）。
+- **UserSchedule**: ユーザーの翌日の予定（出社、在宅など）。
+- **TargetSOC**: 算出された目標充電率（0〜100%の数値）。
+- **ExecutionLog**: 実行結果のログ（タイムスタンプ、算出されたSOC、成否、エラー詳細）。
+
+## Success Criteria *(mandatory)*
+
+### Measurable Outcomes
+
+- **SC-001**: 毎日指定された時刻に、99%の成功率で自動設定処理が開始されること。
+- **SC-002**: 天気APIの取得からEP CUBEアプリの設定保存までの全自動フローが、正常系において3分以内に完了すること。
+- **SC-003**: UI操作の失敗やAPIエラーが発生した場合、100%の確率で誤操作を防ぎ（処理中断）、ユーザーにエラー通知が届くこと。
+- **SC-004**: 1ヶ月間の運用において、手動での深夜充電設定変更が不要になること（ユーザーの介入率が5%未満であること）。
+
+## Assumptions
+
+- 実行環境となるAndroid端末は、常に電源に接続され、安定したWi-Fiネットワークに接続されている。
+- EP CUBE公式アプリは対象端末にインストール済みであり、ログイン状態が維持されている。
+- Androidのユーザー補助機能（Accessibility Service）の権限は、ユーザーによって事前に手動で許可されている。
+- 端末の画面ロックは解除されているか、Accessibility Serviceが画面ロックをバイパスして操作できる設定になっている。
