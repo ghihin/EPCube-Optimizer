@@ -22,4 +22,4 @@
 本プロジェクトは個人開発であり、公式アプリのUIをエミュレートするものです。利用は自己責任で行ってください。
 
 ---
-Created by [ghihin](https://github.com/ghihin)
+Created by [ghihin](https://github.com/ghihin)  
