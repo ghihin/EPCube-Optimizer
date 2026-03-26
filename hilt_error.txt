@@ -1,0 +1,213 @@
+﻿> Task :app:checkKotlinGradlePluginConfigurationErrors
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
+> Task :app:compileDebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:hiltAggregateDepsDebug UP-TO-DATE
+
+> Task :app:hiltJavaCompileDebug
+.\gradlew.bat : D:\hag
+ihara\EPCube-Optimizer
+\app\build\generated\h
+ilt\component_sources\
+debug\com\ghihin\epcub
+eoptimizer\EpcubeOptim
+izerApp_HiltComponents
+.java:138: エラー: [Dagge
+r/MissingBinding] java
+.time.ZoneId cannot be
+ provided without an @
+Provides-annotated met
+hod.
+発生場所 行:1 文字:1
++ .\gradlew.bat hiltJa
+vaCompileDebug --conso
+le=plain 2>&1 | Out-Fi
+le -E ...
++ ~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~
+    + CategoryInfo    
+          : NotSpeci  
+  fied: (D:\hagihar   
+ a\EPC...notated m    
+ethod.:String) []    ,
+ RemoteException
+    + FullyQualifiedE 
+   rrorId : NativeCo  
+  mmandError
+ 
+  public abstract stat
+ic class SingletonC im
+plements EpcubeOptimiz
+erApp_GeneratedInjecto
+r,
+                      
+   ^
+  
+  Missing binding usag
+e:
+      java.time.ZoneId
+ is injected at
+          com.ghihin.e
+pcubeoptimizer.data.re
+pository.WeatherReposi
+toryImpl(…, zoneId)
+      com.ghihin.epcub
+eoptimizer.data.reposi
+tory.WeatherRepository
+Impl is injected at
+          com.ghihin.e
+pcubeoptimizer.core.di
+.RepositoryModule.bind
+WeatherRepository(impl
+)
+      com.ghihin.epcub
+eoptimizer.domain.repo
+sitory.WeatherReposito
+ry is injected at
+          com.ghihin.e
+pcubeoptimizer.present
+ation.main.MainViewMod
+el(weatherRepository, 
+…)
+      com.ghihin.epcub
+eoptimizer.presentatio
+n.main.MainViewModel i
+s injected at
+          com.ghihin.e
+pcubeoptimizer.present
+ation.main.MainViewMod
+el_HiltModules.BindsMo
+dule.binds(arg0)
+      @dagger.hilt.and
+roid.internal.lifecycl
+e.HiltViewModelMap jav
+a.util.Map<java.lang.S
+tring,javax.inject.Pro
+vider<androidx.lifecyc
+le.ViewModel>> is requ
+ested at
+          dagger.hilt.
+android.internal.lifec
+ycle.HiltViewModelFact
+ory.ViewModelFactories
+EntryPoint.getHiltView
+ModelMap() [com.ghihin
+.epcubeoptimizer.Epcub
+eOptimizerApp_HiltComp
+onents.SingletonC → co
+m.ghihin.epcubeoptimiz
+er.EpcubeOptimizerApp_
+HiltComponents.Activit
+yRetainedC → com.ghihi
+n.epcubeoptimizer.Epcu
+beOptimizerApp_HiltCom
+ponents.ViewModelC]
+D:\hagihara\EPCube-Opt
+imizer\app\build\gener
+ated\hilt\component_so
+urces\debug\com\ghihin
+\epcubeoptimizer\Epcub
+eOptimizerApp_HiltComp
+onents.java:138: エラー: 
+[Dagger/MissingBinding
+] com.ghihin.epcubeopt
+imizer.domain.usecase.
+CalculateTargetSocUseC
+ase cannot be provided
+ without an @Inject co
+nstructor or an @Provi
+des-annotated method.
+  public abstract stat
+ic class SingletonC im
+plements EpcubeOptimiz
+erApp_GeneratedInjecto
+r,
+                      
+   ^
+  
+  Missing binding usag
+e:
+      com.ghihin.epcub
+eoptimizer.domain.usec
+ase.CalculateTargetSoc
+UseCase is injected at
+          com.ghihin.e
+pcubeoptimizer.present
+ation.main.MainViewMod
+el(…, calculateTargetS
+ocUseCase)
+      com.ghihin.epcub
+eoptimizer.presentatio
+n.main.MainViewModel i
+s injected at
+          com.ghihin.e
+pcubeoptimizer.present
+ation.main.MainViewMod
+el_HiltModules.BindsMo
+dule.binds(arg0)
+      @dagger.hilt.and
+roid.internal.lifecycl
+e.HiltViewModelMap jav
+a.util.Map<java.lang.S
+tring,javax.inject.Pro
+vider<androidx.lifecyc
+le.ViewModel>> is requ
+ested at
+          dagger.hilt.
+android.internal.lifec
+ycle.HiltViewModelFact
+ory.ViewModelFactories
+EntryPoint.getHiltView
+ModelMap() [com.ghihin
+.epcubeoptimizer.Epcub
+eOptimizerApp_HiltComp
+onents.SingletonC → co
+m.ghihin.epcubeoptimiz
+er.EpcubeOptimizerApp_
+HiltComponents.Activit
+yRetainedC → com.ghihi
+n.epcubeoptimizer.Epcu
+beOptimizerApp_HiltCom
+ponents.ViewModelC]
+エラー2個
+
+> Task :app:hiltJavaCompileDebug FAILED
+
+FAILURE: Build failed 
+with an exception.
+
+* What went wrong:
+Execution failed for t
+ask ':app:hiltJavaComp
+ileDebug'.
+> Compilation failed; 
+see the compiler error
+ output for details.
+
+* Try:
+> Run with --info opti
+on to get more log out
+put.
+> Run with --scan to g
+et full insights.
+
+BUILD FAILED in 4s
+21 actionable tasks: 2 executed, 19 up-to-date
