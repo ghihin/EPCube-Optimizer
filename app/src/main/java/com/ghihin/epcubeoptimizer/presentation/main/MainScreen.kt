@@ -1,5 +1,6 @@
 package com.ghihin.epcubeoptimizer.presentation.main
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,10 +24,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.ghihin.epcubeoptimizer.BuildConfig
+import com.ghihin.epcubeoptimizer.core.accessibility.EpCubeAccessibilityService
 
 /**
  * メイン画面の Composable。
@@ -55,6 +59,14 @@ fun MainScreen(
                 onToggleCommute = { viewModel.toggleTomorrowCommute() }
             )
         }
+        
+        // バージョン情報を画面下部に表示
+        Text(
+            text = "v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
 
@@ -106,6 +118,8 @@ private fun SuccessContent(
     state: MainUiState.Success,
     onToggleCommute: () -> Unit
 ) {
+    val context = LocalContext.current
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(20.dp),
@@ -197,6 +211,22 @@ private fun SuccessContent(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // マクロ実行ボタン
+        Button(
+            onClick = {
+                val intent = Intent(context, EpCubeAccessibilityService::class.java).apply {
+                    action = EpCubeAccessibilityService.ACTION_START_MACRO
+                    putExtra(EpCubeAccessibilityService.EXTRA_TARGET_SOC, state.targetSoc.value)
+                }
+                context.startService(intent)
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("EP CUBEに反映")
+        }
     }
 }
 

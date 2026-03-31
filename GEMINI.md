@@ -1,8 +1,10 @@
 ﻿# EPCube-Optimizer Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-03-26
+Auto-generated from all feature plans. Last updated: 2026-03-31
 
 ## Active Technologies
+- Kotlin 1.9+ + Android AccessibilityService API, Kotlin Coroutines/Flow (002-epcube-macro-accessibility)
+- N/A (状態はメモリ上で管理) (002-epcube-macro-accessibility)
 
 - Kotlin (最新安定版) (001-soc-optimization)
 
@@ -22,6 +24,7 @@ tests/
 Kotlin (最新安定版): Follow standard conventions
 
 ## Recent Changes
+- 002-epcube-macro-accessibility: Added Kotlin 1.9+ + Android AccessibilityService API, Kotlin Coroutines/Flow
 
 - 001-soc-optimization: Added Kotlin (最新安定版)
 
