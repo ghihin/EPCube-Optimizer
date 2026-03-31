@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">EPCubeOptimizer</string>
+    <string name="accessibility_service_description">EP CUBEアプリの目標SOCを自動設定するためのマクロ機能を提供します。</string>
 </resources>
