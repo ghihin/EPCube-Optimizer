@@ -135,8 +135,8 @@ class EpCubeAccessibilityService : AccessibilityService() {
         val saveButton = pollForNodeByText("設定")
         saveButton.performAction(AccessibilityNodeInfo.ACTION_CLICK)
 
-        Log.d(TAG, "Waiting 20 seconds for settings to apply...")
-        delay(20000)
+        Log.d(TAG, "Waiting ${com.ghihin.epcubeoptimizer.automation.Config.VERIFICATION_WAIT_TIME_MS / 1000} seconds for settings to apply...")
+        delay(com.ghihin.epcubeoptimizer.automation.Config.VERIFICATION_WAIT_TIME_MS)
 
         // 6. Verify the new SOC value
         currentState = MacroState.WAITING_FOR_SUCCESS // Reusing state for verification

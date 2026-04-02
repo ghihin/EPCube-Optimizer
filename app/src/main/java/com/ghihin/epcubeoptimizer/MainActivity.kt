@@ -5,12 +5,24 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.ghihin.epcubeoptimizer.core.accessibility.EpCubeAccessibilityService
 import com.ghihin.epcubeoptimizer.presentation.main.MainScreen
+import com.ghihin.epcubeoptimizer.ui.schedule.ScheduleViewerScreen
 import dagger.hilt.android.AndroidEntryPoint
 
 /** アプリのエントリーポイントとなる Activity。Hilt による DI を受け取る。 */
@@ -25,7 +37,31 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainScreen()
+                    var showViewer by remember { mutableStateOf(false) }
+                    
+                    if (showViewer) {
+                        ScheduleViewerScreen(
+                            onBack = { showViewer = false },
+                            onTestMacroClicked = {
+                                val intent = Intent(this@MainActivity, com.ghihin.epcubeoptimizer.automation.WakeActivity::class.java).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                }
+                                startActivity(intent)
+                            }
+                        )
+                    } else {
+                        Column {
+                            Box(modifier = Modifier.weight(1f)) {
+                                MainScreen()
+                            }
+                            Button(
+                                onClick = { showViewer = true },
+                                modifier = Modifier.fillMaxWidth().padding(16.dp)
+                            ) {
+                                Text("📅 1週間先のスケジュール・予測SOCを確認")
+                            }
+                        }
+                    }
                 }
             }
         }
