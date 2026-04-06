@@ -34,12 +34,12 @@
 
 **⚠️ CRITICAL**: Phase 2 完了前に Phase 3 以降を開始しないこと。
 
-- [ ] T004 [P] `app/src/main/java/com/ghihin/epcubeoptimizer/calendar/CalendarLogWriter.kt` を新規作成する。Hilt `@Singleton` で提供。以下のメソッドを実装する:
+- [x] T004 [P] `app/src/main/java/com/ghihin/epcubeoptimizer/calendar/CalendarLogWriter.kt` を新規作成する。Hilt `@Singleton` で提供。以下のメソッドを実装する:
   - `private suspend fun getDefaultCalendarId(): Long?` — `CalendarContract.Calendars.CONTENT_URI` に対し `IS_PRIMARY = 1` または `VISIBLE = 1` で SELECT し最初のカレンダーIDを返す。取得不可の場合は `null`
   - `private suspend fun isDuplicateEvent(timeMillis: Long): Boolean` — `DTSTART >= timeMillis - 30分` かつ `DTSTART <= timeMillis + 30分` かつ `TITLE LIKE '%EPCUBE設定%'` で SELECT し 1件以上存在すれば `true`
   - `suspend fun writeExecutionResult(event: ExecutionCalendarEvent): Boolean` — `isDuplicateEvent()` が `true` の場合は INSERT をスキップして `false` を返す。`getDefaultCalendarId()` が `null` の場合も同様。INSERT 失敗時は `Log.e` のみで例外を外に伝播しない
 
-- [ ] T005 [P] `app/src/main/java/com/ghihin/epcubeoptimizer/calendar/CalendarLogWriter.kt` 内の `buildDescription()` メソッドを実装する。`ExecutionCalendarEvent` を受け取り以下のフォーマットで説明欄文字列を生成する（400文字以内を遵守）:
+- [x] T005 [P] `app/src/main/java/com/ghihin/epcubeoptimizer/calendar/CalendarLogWriter.kt` 内の `buildDescription()` メソッドを実装する。`ExecutionCalendarEvent` を受け取り以下のフォーマットで説明欄文字列を生成する（400文字以内を遵守）:
   ```
   【実行結果】
   設定モード: {settingMode}
@@ -57,11 +57,11 @@
   ```
   `buildEventValues()` で `CalendarContract.Events.DESCRIPTION` にセットする
 
-- [ ] T006 [P] `app/src/main/java/com/ghihin/epcubeoptimizer/core/permission/PermissionHelper.kt` を新規作成する。以下を実装する:
+- [x] T006 [P] `app/src/main/java/com/ghihin/epcubeoptimizer/core/permission/PermissionHelper.kt` を新規作成する。以下を実装する:
   - `val CALENDAR_PERMISSIONS = arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)`
   - `fun hasCalendarPermissions(context: Context): Boolean` — `ContextCompat.checkSelfPermission()` で両権限をチェック
 
-- [ ] T007 `app/src/main/java/com/ghihin/epcubeoptimizer/core/di/AppModule.kt` に `CalendarLogWriter` の `@Provides @Singleton` バインドを追加する
+- [x] T007 `app/src/main/java/com/ghihin/epcubeoptimizer/core/di/AppModule.kt` に `CalendarLogWriter` の `@Provides @Singleton` バインドを追加する
 
 **Checkpoint**: `CalendarLogWriter` 単独で動作確認可能（単体テスト可能な状態）。
 

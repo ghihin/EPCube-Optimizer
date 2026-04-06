@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.ghihin.epcubeoptimizer.BuildConfig
+import com.ghihin.epcubeoptimizer.calendar.CalendarLogWriter
 import com.ghihin.epcubeoptimizer.core.network.OpenWeatherMapApi
 import com.ghihin.epcubeoptimizer.data.repository.ScheduleRepositoryImpl
 import com.ghihin.epcubeoptimizer.data.repository.WeatherRepositoryImpl
@@ -79,6 +80,10 @@ object NetworkModule {
 
     @Provides
     fun provideZoneId(): java.time.ZoneId = java.time.ZoneId.systemDefault()
+
+    @Provides
+    @Singleton
+    fun provideCalendarLogWriter(@ApplicationContext context: Context): CalendarLogWriter = CalendarLogWriter(context)
 }
 
 /** Repository インターフェースと実装クラスをバインドする Hilt モジュール。 */
