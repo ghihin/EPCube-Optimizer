@@ -75,17 +75,17 @@
 
 ### 実装: User Story 1
 
-- [ ] T008 [US1] `app/src/main/java/com/ghihin/epcubeoptimizer/automation/AutomationOrchestrator.kt` を修正する。`CalendarLogWriter` を `@Inject constructor` に追加し、`executeNightlyRoutine()` 内で以下の処理を実装する:
+- [x] T008 [US1] `app/src/main/java/com/ghihin/epcubeoptimizer/automation/AutomationOrchestrator.kt` を修正する。`CalendarLogWriter` を `@Inject constructor` に追加し、`executeNightlyRoutine()` 内で以下の処理を実装する:
   1. `calculateTargetSocUseCase()` の結果（`targetSocResult`）から `WeatherForecast`（天気・雲量・降水確率）を内部フィールドに退避する
   2. `context.registerReceiver()` で `ACTION_MACRO_RESULT` を受信する `BroadcastReceiver` を動的登録する
 
-- [ ] T009 [US1] `AutomationOrchestrator.kt` に **BroadcastReceiver の結果受信処理**を実装する。インテントから `EXTRA_IS_SUCCESS`, `EXTRA_TARGET_SOC_RESULT`, `EXTRA_ERROR_MESSAGE`, `EXTRA_PRE_EXEC_SOC`, `EXTRA_PRE_EXEC_MODE` を取り出し、`ExecutionCalendarEvent` を組み立て `CalendarLogWriter.writeExecutionResult()` を呼び出す
+- [x] T009 [US1] `AutomationOrchestrator.kt` に **BroadcastReceiver の結果受信処理**を実装する。インテントから `EXTRA_IS_SUCCESS`, `EXTRA_TARGET_SOC_RESULT`, `EXTRA_ERROR_MESSAGE`, `EXTRA_PRE_EXEC_SOC`, `EXTRA_PRE_EXEC_MODE` を取り出し、`ExecutionCalendarEvent` を組み立て `CalendarLogWriter.writeExecutionResult()` を呼び出す
 
-- [ ] T010 [US1] `AutomationOrchestrator.kt` に **BroadcastReceiver のメモリリーク防止処理**を実装する（ユーザー必須要件①）。受信後の `onReceive()` の末尾、および既存の `catch(e: Exception)` ブロック内、さらに `finally` ブロック内で **必ず** `context.unregisterReceiver(receiver)` を呼び出す。`isReceiverRegistered` フラグを設け二重解除を防ぐ
+- [x] T010 [US1] `AutomationOrchestrator.kt` に **BroadcastReceiver のメモリリーク防止処理**を実装する（ユーザー必須要件①）。受信後の `onReceive()` の末尾、および既存の `catch(e: Exception)` ブロック内、さらに `finally` ブロック内で **必ず** `context.unregisterReceiver(receiver)` を呼び出す。`isReceiverRegistered` フラグを設け二重解除を防ぐ
 
-- [ ] T011 [US1] `AutomationOrchestrator.kt` に **マクロタイムアウト（ハングアップ）対策**を実装する（ユーザー必須要件②）。`BroadcastReceiver` 登録後の待機処理を `withTimeoutOrNull(180_000L) { ... }` (3分) でラップし、タイムアウト時（`null` 返却時）は `context.unregisterReceiver()` を呼び出したうえで `ExecutionCalendarEvent(isSuccess = false, errorMessage = "マクロ応答タイムアウト (3分)")` を組み立て `CalendarLogWriter.writeExecutionResult()` を呼び出す
+- [x] T011 [US1] `AutomationOrchestrator.kt` に **マクロタイムアウト（ハングアップ）対策**を実装する（ユーザー必須要件②）。`BroadcastReceiver` 登録後の待機処理を `withTimeoutOrNull(180_000L) { ... }` (3分) でラップし、タイムアウト時（`null` 返却時）は `context.unregisterReceiver()` を呼び出したうえで `ExecutionCalendarEvent(isSuccess = false, errorMessage = "マクロ応答タイムアウト (3分)")` を組み立て `CalendarLogWriter.writeExecutionResult()` を呼び出す
 
-- [ ] T012 [US1] `AutomationOrchestrator.kt` の `catch(e: Exception)` ブロック（マクロ起動前の例外）にもカレンダーへ「❌ EPCUBE設定失敗」イベントを書き込む処理を追加する。この時点では `preExecSoc / preExecMode` は未取得のため `null` として渡す
+- [x] T012 [US1] `AutomationOrchestrator.kt` の `catch(e: Exception)` ブロック（マクロ起動前の例外）にもカレンダーへ「❌ EPCUBE設定失敗」イベントを書き込む処理を追加する。この時点では `preExecSoc / preExecMode` は未取得のため `null` として渡す
 
 **Checkpoint**: 成功ケースで「✅ EPCUBE設定完了」がカレンダーに登録される。US1 独立検証可能。
 

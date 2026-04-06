@@ -669,6 +669,22 @@ class EpCubeAccessibilityService : AccessibilityService() {
             intent.putExtra(EXTRA_ERROR_MESSAGE, errorMessage)
         }
         startActivity(intent)
+        
+        // AutomationOrchestrator が BroadcastReceiver で受信できるようにブロードキャストも送信
+        val broadcastIntent = Intent(ACTION_MACRO_RESULT).apply {
+            putExtra(EXTRA_IS_SUCCESS, isSuccess)
+            putExtra(EXTRA_TARGET_SOC_RESULT, targetSoc)
+            putExtra(EXTRA_PRE_EXEC_SOC, preExecSoc)
+            if (preExecMode != null) {
+                putExtra(EXTRA_PRE_EXEC_MODE, preExecMode)
+            }
+            if (errorMessage != null) {
+                putExtra(EXTRA_ERROR_MESSAGE, errorMessage)
+            }
+            setPackage(applicationContext.packageName) // 明示的に自身に制限
+        }
+        sendBroadcast(broadcastIntent)
+        
         currentState = MacroState.IDLE
         
         // Reset scraped values for next run
