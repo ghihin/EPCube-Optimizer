@@ -23,12 +23,17 @@ class EpCubeAccessibilityService : AccessibilityService() {
         const val EXTRA_ERROR_MESSAGE = "EXTRA_ERROR_MESSAGE"
         const val EXTRA_TARGET_SOC_RESULT = "EXTRA_TARGET_SOC_RESULT"
         
+        const val EXTRA_PRE_EXEC_SOC = "EXTRA_PRE_EXEC_SOC"
+        const val EXTRA_PRE_EXEC_MODE = "EXTRA_PRE_EXEC_MODE"
+        
         private const val TARGET_PACKAGE = "com.eternalplanetenergy.epcube.jp"
     }
 
     private var currentState = MacroState.IDLE
     private var targetSoc: Int = -1
     private var isSunnyTomorrow: Boolean = false
+    private var currentSocScraped: Int = -1
+    private var currentModeScraped: String? = null
     private var macroJob: Job? = null
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
@@ -120,6 +125,7 @@ class EpCubeAccessibilityService : AccessibilityService() {
                 val match = Regex("\\((\\d+)%\\)").find(socNode.text?.toString() ?: "")
                 if (match != null) {
                     currentSoc = match.groupValues[1].toInt()
+                    currentSocScraped = currentSoc // 値を退避
                     Log.d(TAG, "Scraped current SOC from home: $currentSoc%")
                 }
             }
@@ -129,6 +135,7 @@ class EpCubeAccessibilityService : AccessibilityService() {
 
         // 3. Mode Decision
         val currentMode = findCurrentModeOnHome()
+        currentModeScraped = currentMode // 値を退避
         val isGreenModeNext = (currentSoc != null && currentSoc >= 60 && isSunnyTomorrow)
         Log.d(TAG, "Mode decision: currentSoc=$currentSoc, isSunnyTomorrow=$isSunnyTomorrow, currentMode=$currentMode => GreenMode? $isGreenModeNext")
 
@@ -638,7 +645,7 @@ class EpCubeAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun returnMacroResult(isSuccess: Boolean, errorMessage: String?) {
+    private fun returnMacroResult(isSuccess: Boolean, errorMessage: String?, preExecSoc: Int = currentSocScraped, preExecMode: String? = currentModeScraped) {
         Log.d(TAG, "Returning result: success=$isSuccess, error=$errorMessage")
         
         // Show Toast for debugging
@@ -653,10 +660,19 @@ class EpCubeAccessibilityService : AccessibilityService() {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         intent.putExtra(EXTRA_IS_SUCCESS, isSuccess)
         intent.putExtra(EXTRA_TARGET_SOC_RESULT, targetSoc)
+        intent.putExtra(EXTRA_PRE_EXEC_SOC, preExecSoc)
+        if (preExecMode != null) {
+            intent.putExtra(EXTRA_PRE_EXEC_MODE, preExecMode)
+        }
+        
         if (errorMessage != null) {
             intent.putExtra(EXTRA_ERROR_MESSAGE, errorMessage)
         }
         startActivity(intent)
         currentState = MacroState.IDLE
+        
+        // Reset scraped values for next run
+        currentSocScraped = -1
+        currentModeScraped = null
     }
 }

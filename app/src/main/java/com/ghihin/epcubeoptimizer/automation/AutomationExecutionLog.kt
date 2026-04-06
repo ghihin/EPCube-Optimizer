@@ -26,5 +26,11 @@ data class AutomationExecutionLog(
     val timestamp: LocalDateTime = LocalDateTime.now(),
     val status: ExecutionStatus,
     val socTarget: Int? = null,
-    val errorDetail: String? = null
+    val errorDetail: String? = null,
+    // カレンダーロギング用に追加（in-memoryのみ、DB永続化なし）
+    val preExecSoc: Int? = null,
+    val preExecMode: String? = null,
+    val weatherDescription: String? = null,
+    val cloudiness: Int? = null,
+    val precipitationProbability: Float? = null
 )

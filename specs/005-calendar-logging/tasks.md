@@ -20,9 +20,9 @@
 
 **⚠️ CRITICAL**: Phase 1 が完了するまで、いかなるユーザーストーリー実装も開始できない。
 
-- [ ] T001 `app/src/main/AndroidManifest.xml` に `<uses-permission android:name="android.permission.WRITE_CALENDAR" />` を `READ_CALENDAR` の直下に追加する
-- [ ] T002 [P] `app/src/main/java/com/ghihin/epcubeoptimizer/automation/AutomationExecutionLog.kt` の `AutomationExecutionLog` データクラスにカレンダーロギング用フィールド（`preExecSoc: Int? = null`, `preExecMode: String? = null`, `weatherDescription: String? = null`, `cloudiness: Int? = null`, `precipitationProbability: Float? = null`）を追加する
-- [ ] T003 [P] `app/src/main/java/com/ghihin/epcubeoptimizer/core/accessibility/EpCubeAccessibilityService.kt` の `companion object` に `EXTRA_PRE_EXEC_SOC: String` と `EXTRA_PRE_EXEC_MODE: String` の定数を追加し、`executeMacroSteps()` 内で取得した `currentSoc` と `currentMode` をフィールドとして退避し、`returnMacroResult()` のシグネチャを `(isSuccess: Boolean, errorMessage: String?, preExecSoc: Int = -1, preExecMode: String? = null)` に変更して呼び出し箇所をすべて更新する
+- [x] T001 `app/src/main/AndroidManifest.xml` に `<uses-permission android:name="android.permission.WRITE_CALENDAR" />` を `READ_CALENDAR` の直下に追加する
+- [x] T002 [P] `app/src/main/java/com/ghihin/epcubeoptimizer/automation/AutomationExecutionLog.kt` の `AutomationExecutionLog` データクラスにカレンダーロギング用フィールド（`preExecSoc: Int? = null`, `preExecMode: String? = null`, `weatherDescription: String? = null`, `cloudiness: Int? = null`, `precipitationProbability: Float? = null`）を追加する
+- [x] T003 [P] `app/src/main/java/com/ghihin/epcubeoptimizer/core/accessibility/EpCubeAccessibilityService.kt` の `companion object` に `EXTRA_PRE_EXEC_SOC: String` と `EXTRA_PRE_EXEC_MODE: String` の定数を追加し、`executeMacroSteps()` 内で取得した `currentSoc` と `currentMode` をフィールドとして退避し、`returnMacroResult()` のシグネチャを `(isSuccess: Boolean, errorMessage: String?, preExecSoc: Int = -1, preExecMode: String? = null)` に変更して呼び出し箇所をすべて更新する
 
 **Checkpoint**: AndroidManifest・モデル・サービスの基礎変更が完了。次フェーズへ進める。
 
