@@ -22,7 +22,9 @@ import java.util.Locale
 fun ScheduleViewerScreen(
     viewModel: ScheduleViewModel = hiltViewModel(),
     onBack: () -> Unit,
-    onTestMacroClicked: () -> Unit
+    onTestMacroClicked: () -> Unit,
+    onTestGreenModeClicked: () -> Unit,
+    onTestSmartModeClicked: () -> Unit
 ) {
     val schedules by viewModel.schedules.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -60,6 +62,22 @@ fun ScheduleViewerScreen(
         ) {
             Text("【デバッグ】今すぐ深夜マクロ実行を手動テスト")
         }
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(
+            onClick = onTestGreenModeClicked,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+        ) {
+            Text("【デバッグ】グリーンモードへ切り替え手動テスト", color = Color.White)
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(
+            onClick = onTestSmartModeClicked,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
+        ) {
+            Text("【デバッグ】スマートモード99%へ切り替え手動テスト", color = Color.White)
+        }
     }
 }
 
@@ -93,18 +111,39 @@ fun ScheduleItemCard(schedule: DailySchedule) {
                 val mode = if (schedule.isCommute) "外出モード【出社】" else "在宅モード"
                 val modeColor = if (schedule.isCommute) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
                 
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(modeColor.copy(alpha = 0.1f))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = mode, 
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = modeColor,
-                        fontWeight = FontWeight.Bold
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(modeColor.copy(alpha = 0.1f))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = mode, 
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = modeColor,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    val plannedModeText = if (schedule.isSunnyTomorrow) "🌿 グリーンモード候補 (※SOC≥60%時)" else "🔋 スマートモード予定"
+                    val plannedModeColor = if (schedule.isSunnyTomorrow) Color(0xFF4CAF50) else Color(0xFF2196F3)
+                    
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(plannedModeColor.copy(alpha = 0.1f))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = plannedModeText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = plannedModeColor,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
                 
                 Spacer(modifier = Modifier.height(8.dp))

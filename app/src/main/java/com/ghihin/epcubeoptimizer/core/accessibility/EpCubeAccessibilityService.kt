@@ -16,6 +16,7 @@ class EpCubeAccessibilityService : AccessibilityService() {
         private const val TAG = "EpCubeAccessibility"
         const val ACTION_START_MACRO = "com.ghihin.epcubeoptimizer.ACTION_START_MACRO"
         const val EXTRA_TARGET_SOC = "EXTRA_TARGET_SOC"
+        const val EXTRA_IS_SUNNY_TOMORROW = "EXTRA_IS_SUNNY_TOMORROW"
         
         const val ACTION_MACRO_RESULT = "com.ghihin.epcubeoptimizer.ACTION_MACRO_RESULT"
         const val EXTRA_IS_SUCCESS = "EXTRA_IS_SUCCESS"
@@ -27,6 +28,7 @@ class EpCubeAccessibilityService : AccessibilityService() {
 
     private var currentState = MacroState.IDLE
     private var targetSoc: Int = -1
+    private var isSunnyTomorrow: Boolean = false
     private var macroJob: Job? = null
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
@@ -41,6 +43,7 @@ class EpCubeAccessibilityService : AccessibilityService() {
         Log.d(TAG, "onStartCommand received: ${intent?.action}")
         if (intent?.action == ACTION_START_MACRO) {
             targetSoc = intent.getIntExtra(EXTRA_TARGET_SOC, -1)
+            isSunnyTomorrow = intent.getBooleanExtra(EXTRA_IS_SUNNY_TOMORROW, false)
             if (targetSoc in 0..100) {
                 successToastDetected = false // Reset flag
                 startMacro()
@@ -106,59 +109,245 @@ class EpCubeAccessibilityService : AccessibilityService() {
     private suspend fun executeMacroSteps() {
         // 1. Launch App
         launchEpCubeApp()
+        delay(4000) // アプリ起動・ホーム画面読み込み待ちタイムアウトを少し長めに
         
-        // 2. Wait for Home and click Smart Mode settings
+        // 2. Read Phase (Scraping current SOC from Home)
         currentState = MacroState.WAITING_FOR_HOME
-        val smartModeNode = pollForNodeByText("スマートモード")
-        val settingsButton = findSettingsButtonNear(smartModeNode)
-        if (settingsButton != null) {
-            settingsButton.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        var currentSoc: Int? = null
+        try {
+            val socNode = pollForNodeByRegex("\\(\\d+%\\)", timeoutMs = 8000)
+            if (socNode != null) {
+                val match = Regex("\\((\\d+)%\\)").find(socNode.text?.toString() ?: "")
+                if (match != null) {
+                    currentSoc = match.groupValues[1].toInt()
+                    Log.d(TAG, "Scraped current SOC from home: $currentSoc%")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to scrape current SOC, will fallback to SMART mode.", e)
+        }
+
+        // 3. Mode Decision
+        val currentMode = findCurrentModeOnHome()
+        val isGreenModeNext = (currentSoc != null && currentSoc >= 60 && isSunnyTomorrow)
+        Log.d(TAG, "Mode decision: currentSoc=$currentSoc, isSunnyTomorrow=$isSunnyTomorrow, currentMode=$currentMode => GreenMode? $isGreenModeNext")
+
+        // Idempotency Check
+        if (isGreenModeNext && currentMode?.contains("グリーンモード") == true) {
+            Log.d(TAG, "Already in Green Mode. Idempotency achieved. Skipping UI actions.")
+            currentState = MacroState.COMPLETED
+            returnMacroResult(true, null)
+            return
+        }
+
+        // 4. Action Phase (Tap existing mode button on Home to enter Settings)
+        val modeButton = pollForOperationModeButtonOnHome()
+        modeButton.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        delay(2000) // 遷移待ち
+
+        if (isGreenModeNext) {
+            // --- GREEN MODE ACTION ---
+            val greenRadio = pollForNodeByText("グリーンモード")
+            clickNodeOrParent(greenRadio)
+            delay(500)
+            
+            // 確認ダイアログ対策（無ければスルーする）
+            try {
+                val confirmButton = pollForNodeByText("確認", timeoutMs = 2000)
+                clickNodeOrParent(confirmButton)
+                delay(500)
+            } catch (e: Exception) {
+                // do nothing
+            }
+
+            val saveButton = pollForNodeByText("設定")
+            clickNodeOrParent(saveButton)
+            
+            Log.d(TAG, "Waiting ${com.ghihin.epcubeoptimizer.automation.Config.VERIFICATION_WAIT_TIME_MS / 1000} seconds for settings to apply...")
+            delay(com.ghihin.epcubeoptimizer.automation.Config.VERIFICATION_WAIT_TIME_MS)
+
+            returnToHome()
+
         } else {
-            throw Exception("「スマートモード」の横に設定ボタンが見つかりませんでした")
+            // --- SMART MODE ACTION (Fallback includes this) ---
+            val isAlreadySmart = currentMode?.contains("スマートモード") == true
+            
+            if (!isAlreadySmart) {
+                // Not in Smart Mode -> do 2-stage flow to assure UI
+                val smartRadio = pollForNodeByText("スマートモード")
+                clickNodeOrParent(smartRadio)
+                delay(500)
+
+                // 確認ダイアログ対策（無ければスルーする）
+                try {
+                    val confirmButton = pollForNodeByText("確認", timeoutMs = 2000)
+                    clickNodeOrParent(confirmButton)
+                    delay(500)
+                } catch (e: Exception) {
+                    // do nothing
+                }
+
+                // Step 1: まず設定ボタンでスマートモードを確定させる
+                val firstSaveButton = pollForNodeByText("設定")
+                clickNodeOrParent(firstSaveButton)
+                delay(3000) // ホーム画面または設定反映を待つ
+
+                // Androidシステムによる確実な「戻る」アクションで確実にホームを待つ
+                returnToHome()
+
+                // Step 2: リセットされたホーム画面から再度モードボタンを押してスライダーを操作するため設定画面に入る
+                val modeButtonAgain = pollForOperationModeButtonOnHome()
+                modeButtonAgain.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                delay(2000)
+            } else {
+                Log.d(TAG, "Already in Smart Mode, adjusting slider directly...")
+            }
+
+            // ホーム画面のUIが通信ラグ等で古かった場合、再進入時にグリーンモードが選ばれた状態に戻ってしまうことがあるため、
+            // スライダーを操作する直前にもう一度確実に「スマートモード」ラジオボタンを押下する
+            val finalSmartRadio = pollForNodeByText("スマートモード")
+            clickNodeOrParent(finalSmartRadio)
+            delay(500)
+            try {
+                val confirmButton = pollForNodeByText("確認", timeoutMs = 2000)
+                clickNodeOrParent(confirmButton)
+                delay(500)
+            } catch (e: Exception) {
+                // do nothing
+            }
+
+            currentState = MacroState.ADJUSTING_SOC
+            adjustSocValue() // 既存のスライダー調整ロジック
+
+            currentState = MacroState.SAVING
+            val finalSaveButton = pollForNodeByText("設定")
+            clickNodeOrParent(finalSaveButton)
+
+            Log.d(TAG, "Waiting ${com.ghihin.epcubeoptimizer.automation.Config.VERIFICATION_WAIT_TIME_MS / 1000} seconds for settings to apply...")
+            delay(com.ghihin.epcubeoptimizer.automation.Config.VERIFICATION_WAIT_TIME_MS)
+
+            // 調整結果の検証
+            currentState = MacroState.WAITING_FOR_SUCCESS
+            val newSoc = readCurrentSoc()
+            if (newSoc != targetSoc) {
+                throw Exception("検証失敗。期待値: $targetSoc, 実際: $newSoc")
+            }
+            Log.d(TAG, "Verification successful! New SOC is $newSoc")
+
+            returnToHome()
         }
 
-        // 3. Wait for Settings screen and read current SOC
-        currentState = MacroState.WAITING_FOR_SETTINGS
-        val chargeLimitNode = pollForNodeByText("充電上限") // Assuming it has a colon or similar, or just find the text
-        // Actually, the screenshot shows "充電上限: 90 %" or similar.
-        // We need to find the node that contains the value.
-        // Let's assume we can find the text "充電上限" and then find the value node.
-        // For simplicity in this implementation, we will poll for the text and then find the slider/buttons.
-        delay(2000) // Wait for screen transition
-        
-        // 4. Adjust SOC
-        currentState = MacroState.ADJUSTING_SOC
-        adjustSocValue()
-
-        // 5. Save
-        currentState = MacroState.SAVING
-        val saveButton = pollForNodeByText("設定")
-        saveButton.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-
-        Log.d(TAG, "Waiting ${com.ghihin.epcubeoptimizer.automation.Config.VERIFICATION_WAIT_TIME_MS / 1000} seconds for settings to apply...")
-        delay(com.ghihin.epcubeoptimizer.automation.Config.VERIFICATION_WAIT_TIME_MS)
-
-        // 6. Verify the new SOC value
-        currentState = MacroState.WAITING_FOR_SUCCESS // Reusing state for verification
-        Log.d(TAG, "Verifying SOC value after save...")
-        val newSoc = readCurrentSoc()
-        if (newSoc != targetSoc) {
-            throw Exception("検証失敗。期待値: $targetSoc, 実際: $newSoc")
-        }
-        Log.d(TAG, "Verification successful! New SOC is $newSoc")
-
-        // 7. Go back to home screen
-        val backButton = findBackButton()
-        if (backButton != null) {
-            backButton.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-        } else {
-            throw Exception("戻るボタンが見つかりませんでした")
-        }
-        delay(2000) // Wait for transition back to home
-
-        // 8. Complete and return to Optimizer app
         currentState = MacroState.COMPLETED
         returnMacroResult(true, null)
+    }
+
+    private fun clickNodeOrParent(node: AccessibilityNodeInfo) {
+        if (node.isClickable) {
+            node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            return
+        }
+        var parent = node.parent
+        for (i in 0..3) {
+            if (parent == null) break
+            if (parent.isClickable) {
+                parent.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                return
+            }
+            parent = parent.parent
+        }
+        throw Exception("Clickable node not found for text ${node.text}")
+    }
+
+    private suspend fun pollForNodeByRegex(pattern: String, timeoutMs: Long = 10000): AccessibilityNodeInfo? {
+        Log.d(TAG, "Polling for regex: $pattern")
+        val regex = Regex(pattern)
+        val startTime = System.currentTimeMillis()
+        while (System.currentTimeMillis() - startTime < timeoutMs) {
+            val root = rootInActiveWindow
+            if (root != null) {
+                val node = findNodeByRegex(root, regex)
+                if (node != null) return node
+            }
+            delay(500)
+        }
+        return null
+    }
+
+    private fun findNodeByRegex(node: AccessibilityNodeInfo, regex: Regex): AccessibilityNodeInfo? {
+        val text = node.text?.toString()
+        if (text != null && regex.containsMatchIn(text)) {
+            return node
+        }
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child != null) {
+                val found = findNodeByRegex(child, regex)
+                if (found != null) return found
+            }
+        }
+        return null
+    }
+
+    private suspend fun pollForOperationModeButtonOnHome(timeoutMs: Long = 8000): AccessibilityNodeInfo {
+        val startTime = System.currentTimeMillis()
+        while (System.currentTimeMillis() - startTime < timeoutMs) {
+            val button = findOperationModeButtonOnHome()
+            if (button != null) return button
+            delay(500)
+        }
+        throw Exception("ホーム画面で運転モード再設定ボタンが見つかりませんでした")
+    }
+
+    private suspend fun returnToHome() {
+        for (i in 0..4) {
+            performGlobalAction(GLOBAL_ACTION_BACK)
+            delay(1500)
+            val root = rootInActiveWindow
+            if (root != null) {
+                // ホーム画面特有のテキストが存在すればホームに戻ったと判定
+                if (root.findAccessibilityNodeInfosByText("エネルギー自給率").isNotEmpty() ||
+                    root.findAccessibilityNodeInfosByText("系統").isNotEmpty() ||
+                    root.findAccessibilityNodeInfosByText("本日の売電量").isNotEmpty()
+                ) {
+                    Log.d(TAG, "Successfully returned to Home screen.")
+                    return
+                }
+            }
+        }
+        Log.e(TAG, "Failed to confirm return to Home screen.")
+    }
+
+    private fun findCurrentModeOnHome(): String? {
+        val root = rootInActiveWindow ?: return null
+        val modes = listOf("グリーンモード", "スマートモード", "売電モード", "蓄電優先モード")
+        for (mode in modes) {
+            if (root.findAccessibilityNodeInfosByText(mode).isNotEmpty()) {
+                return mode
+            }
+        }
+        return null
+    }
+
+    private fun findOperationModeButtonOnHome(): AccessibilityNodeInfo? {
+        val root = rootInActiveWindow ?: return null
+        val candidates = mutableListOf<AccessibilityNodeInfo>()
+        
+        candidates.addAll(root.findAccessibilityNodeInfosByText("グリーンモード"))
+        candidates.addAll(root.findAccessibilityNodeInfosByText("スマートモード"))
+        candidates.addAll(root.findAccessibilityNodeInfosByText("売電モード"))
+        candidates.addAll(root.findAccessibilityNodeInfosByText("蓄電優先モード"))
+        
+        for (node in candidates) {
+            var parent = node
+            for (level in 0..5) {
+                if (parent == null) break
+                if (parent.isClickable) {
+                    return parent
+                }
+                parent = parent.parent
+            }
+        }
+        return null
     }
 
     private suspend fun readCurrentSoc(): Int {

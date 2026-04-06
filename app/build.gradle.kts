@@ -27,8 +27,8 @@ android {
         applicationId = "com.ghihin.epcubeoptimizer"
         minSdk = 26
         targetSdk = 34
-        versionCode = 15
-        versionName = "1.14"
+        versionCode = 21
+        versionName = "1.20"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

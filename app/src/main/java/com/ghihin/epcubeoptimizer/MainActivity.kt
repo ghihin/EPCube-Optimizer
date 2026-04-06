@@ -47,6 +47,22 @@ class MainActivity : ComponentActivity() {
                                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                                 }
                                 startActivity(intent)
+                            },
+                            onTestGreenModeClicked = {
+                                val intent = Intent(this@MainActivity, EpCubeAccessibilityService::class.java).apply {
+                                    action = EpCubeAccessibilityService.ACTION_START_MACRO
+                                    putExtra(EpCubeAccessibilityService.EXTRA_TARGET_SOC, 100) // グリーンモード時は使用されないのでダミーの100を渡す
+                                    putExtra(EpCubeAccessibilityService.EXTRA_IS_SUNNY_TOMORROW, true) // グリーンモードを強制
+                                }
+                                startService(intent)
+                            },
+                            onTestSmartModeClicked = {
+                                val intent = Intent(this@MainActivity, EpCubeAccessibilityService::class.java).apply {
+                                    action = EpCubeAccessibilityService.ACTION_START_MACRO
+                                    putExtra(EpCubeAccessibilityService.EXTRA_TARGET_SOC, 99) // テスト用に99%を指定
+                                    putExtra(EpCubeAccessibilityService.EXTRA_IS_SUNNY_TOMORROW, false) // スマートモードを強制
+                                }
+                                startService(intent)
                             }
                         )
                     } else {

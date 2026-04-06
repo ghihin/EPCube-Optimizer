@@ -46,6 +46,7 @@ class AutomationOrchestrator @Inject constructor(
                 val intent = Intent(context, EpCubeAccessibilityService::class.java).apply {
                     action = EpCubeAccessibilityService.ACTION_START_MACRO
                     putExtra(EpCubeAccessibilityService.EXTRA_TARGET_SOC, targetSoc)
+                    putExtra(EpCubeAccessibilityService.EXTRA_IS_SUNNY_TOMORROW, targetSocResult.isSunnyTomorrow)
                 }
                 context.startService(intent)
                 

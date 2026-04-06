@@ -35,7 +35,7 @@ class WeatherRepositoryImplTest {
         val dt = tomorrowEpoch()
         val mockApi = object : OpenWeatherMapApi {
             override suspend fun getForecast(
-                lat: Double, lon: Double, apiKey: String, units: String
+                lat: Double, lon: Double, apiKey: String, units: String, lang: String
             ): WeatherResponse = WeatherResponse(
                 list = listOf(
                     ForecastItem(
@@ -70,7 +70,7 @@ class WeatherRepositoryImplTest {
         val today = LocalDate.now(fixedZone).atStartOfDay(fixedZone).toEpochSecond()
         val mockApi = object : OpenWeatherMapApi {
             override suspend fun getForecast(
-                lat: Double, lon: Double, apiKey: String, units: String
+                lat: Double, lon: Double, apiKey: String, units: String, lang: String
             ): WeatherResponse = WeatherResponse(
                 list = listOf(
                     ForecastItem(
@@ -96,7 +96,7 @@ class WeatherRepositoryImplTest {
     fun `getWeatherForecast - APIリストが空の場合、失敗を返す`() = runBlocking {
         val mockApi = object : OpenWeatherMapApi {
             override suspend fun getForecast(
-                lat: Double, lon: Double, apiKey: String, units: String
+                lat: Double, lon: Double, apiKey: String, units: String, lang: String
             ): WeatherResponse = WeatherResponse(list = emptyList())
         }
 
@@ -110,7 +110,7 @@ class WeatherRepositoryImplTest {
     fun `getWeatherForecast - API例外発生時、失敗を返す`() = runBlocking {
         val mockApi = object : OpenWeatherMapApi {
             override suspend fun getForecast(
-                lat: Double, lon: Double, apiKey: String, units: String
+                lat: Double, lon: Double, apiKey: String, units: String, lang: String
             ): WeatherResponse = throw RuntimeException("ネットワークエラー")
         }
 

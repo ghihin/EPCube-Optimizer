@@ -15,7 +15,8 @@ data class DailySchedule(
     val date: LocalDate,
     val isCommute: Boolean,
     val predictedSoc: Int? = null,
-    val weatherForecast: WeatherForecast? = null
+    val weatherForecast: WeatherForecast? = null,
+    val isSunnyTomorrow: Boolean = false
 ) {
     init {
         predictedSoc?.let {

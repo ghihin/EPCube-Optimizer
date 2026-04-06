@@ -39,7 +39,11 @@ class CalculateTargetSocUseCase @Inject constructor(
             if (schedule.isCommute) 100 else 60
         }
 
-        return TargetSocResult(targetSoc, forecast)
+        val isSunny = if (forecast != null) {
+            forecast.cloudiness <= 30 && forecast.probabilityOfPrecipitation < 0.2f
+        } else false
+
+        return TargetSocResult(targetSoc, forecast, isSunny)
     }
 
     private fun calculateInternal(forecast: WeatherForecast, isCommuteDay: Boolean, targetDate: LocalDate): TargetSOC {
@@ -103,5 +107,6 @@ class CalculateTargetSocUseCase @Inject constructor(
 
 data class TargetSocResult(
     val targetSoc: Int,
-    val weatherForecast: WeatherForecast?
+    val weatherForecast: WeatherForecast?,
+    val isSunnyTomorrow: Boolean = false
 )

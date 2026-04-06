@@ -41,7 +41,8 @@ class ScheduleViewModel @Inject constructor(
                 val targetSocResult = calculateTargetSocUseCase(schedule)
                 schedule.copy(
                     predictedSoc = targetSocResult.targetSoc,
-                    weatherForecast = targetSocResult.weatherForecast
+                    weatherForecast = targetSocResult.weatherForecast,
+                    isSunnyTomorrow = targetSocResult.isSunnyTomorrow
                 )
             }
             _schedules.value = updated
