@@ -25,6 +25,7 @@ class EpCubeAccessibilityService : AccessibilityService() {
         
         const val EXTRA_PRE_EXEC_SOC = "EXTRA_PRE_EXEC_SOC"
         const val EXTRA_PRE_EXEC_MODE = "EXTRA_PRE_EXEC_MODE"
+        const val EXTRA_FROM_ORCHESTRATOR = "EXTRA_FROM_ORCHESTRATOR"
         
         private const val TARGET_PACKAGE = "com.eternalplanetenergy.epcube.jp"
     }
@@ -34,6 +35,7 @@ class EpCubeAccessibilityService : AccessibilityService() {
     private var isSunnyTomorrow: Boolean = false
     private var currentSocScraped: Int = -1
     private var currentModeScraped: String? = null
+    private var isFromOrchestrator: Boolean = false
     private var macroJob: Job? = null
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
@@ -49,6 +51,9 @@ class EpCubeAccessibilityService : AccessibilityService() {
         if (intent?.action == ACTION_START_MACRO) {
             targetSoc = intent.getIntExtra(EXTRA_TARGET_SOC, -1)
             isSunnyTomorrow = intent.getBooleanExtra(EXTRA_IS_SUNNY_TOMORROW, false)
+            isFromOrchestrator = intent.getBooleanExtra(EXTRA_FROM_ORCHESTRATOR, false)
+            
+            Log.d(TAG, "Starting macro: targetSoc=$targetSoc, isSunnyTomorrow=$isSunnyTomorrow, isFromOrchestrator=$isFromOrchestrator")
             if (targetSoc in 0..100) {
                 successToastDetected = false // Reset flag
                 startMacro()
@@ -136,8 +141,8 @@ class EpCubeAccessibilityService : AccessibilityService() {
         // 3. Mode Decision
         val currentMode = findCurrentModeOnHome()
         currentModeScraped = currentMode // 値を退避
-        val isGreenModeNext = (currentSoc != null && currentSoc >= 60 && isSunnyTomorrow)
-        Log.d(TAG, "Mode decision: currentSoc=$currentSoc, isSunnyTomorrow=$isSunnyTomorrow, currentMode=$currentMode => GreenMode? $isGreenModeNext")
+        val isGreenModeNext = (targetSoc == 100)
+        Log.d(TAG, "Mode decision: targetSoc=$targetSoc => GreenMode? $isGreenModeNext (currentMode=$currentMode)")
 
         // Idempotency Check
         if (isGreenModeNext && currentMode?.contains("グリーンモード") == true) {
@@ -661,6 +666,7 @@ class EpCubeAccessibilityService : AccessibilityService() {
         intent.putExtra(EXTRA_IS_SUCCESS, isSuccess)
         intent.putExtra(EXTRA_TARGET_SOC_RESULT, targetSoc)
         intent.putExtra(EXTRA_PRE_EXEC_SOC, preExecSoc)
+        intent.putExtra(EXTRA_FROM_ORCHESTRATOR, isFromOrchestrator)
         if (preExecMode != null) {
             intent.putExtra(EXTRA_PRE_EXEC_MODE, preExecMode)
         }
@@ -675,6 +681,7 @@ class EpCubeAccessibilityService : AccessibilityService() {
             putExtra(EXTRA_IS_SUCCESS, isSuccess)
             putExtra(EXTRA_TARGET_SOC_RESULT, targetSoc)
             putExtra(EXTRA_PRE_EXEC_SOC, preExecSoc)
+            putExtra(EXTRA_FROM_ORCHESTRATOR, isFromOrchestrator)
             if (preExecMode != null) {
                 putExtra(EXTRA_PRE_EXEC_MODE, preExecMode)
             }
@@ -687,8 +694,9 @@ class EpCubeAccessibilityService : AccessibilityService() {
         
         currentState = MacroState.IDLE
         
-        // Reset scraped values for next run
+        // Reset variables for next run
         currentSocScraped = -1
         currentModeScraped = null
+        isFromOrchestrator = false
     }
 }

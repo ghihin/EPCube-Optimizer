@@ -85,7 +85,7 @@ class AutomationOrchestrator @Inject constructor(
                                     // 解除 (T010 リソースリーク対策)
                                     if (isReceiverRegistered && receiver != null) {
                                         try {
-                                            context.unregisterReceiver(receiver)
+                                            context.applicationContext.unregisterReceiver(receiver)
                                             isReceiverRegistered = false
                                         } catch (e: Exception) {
                                             Log.e(Config.LOG_TAG, "Error unregistering receiver", e)
@@ -113,6 +113,7 @@ class AutomationOrchestrator @Inject constructor(
                             action = EpCubeAccessibilityService.ACTION_START_MACRO
                             putExtra(EpCubeAccessibilityService.EXTRA_TARGET_SOC, targetSoc)
                             putExtra(EpCubeAccessibilityService.EXTRA_IS_SUNNY_TOMORROW, isSunnyTomorrow)
+                            putExtra(EpCubeAccessibilityService.EXTRA_FROM_ORCHESTRATOR, true)
                         }
                         context.startService(launchIntent)
                         
@@ -175,6 +176,7 @@ class AutomationOrchestrator @Inject constructor(
                 val fallbackIntent = Intent(context, EpCubeAccessibilityService::class.java).apply {
                     action = EpCubeAccessibilityService.ACTION_START_MACRO
                     putExtra(EpCubeAccessibilityService.EXTRA_TARGET_SOC, Config.FALLBACK_SAFE_SOC)
+                    putExtra(EpCubeAccessibilityService.EXTRA_FROM_ORCHESTRATOR, true)
                 }
                 context.startService(fallbackIntent)
                 

@@ -26,6 +26,8 @@ tests/
 Kotlin (最新安定版): Follow standard conventions
 
 ## Recent Changes
+- 005-calendar-logging: Added CalendarContract logic, execution result logging, duplicate check, fail-safe mechanism, and WRITE_CALENDAR runtime permissions flow.
+- 004-dynamic-mode-switching: Added OpenWeatherMap integration, target SOC prediction algorithm, and schedule viewer UI.
 - 003-automation-scheduling: Added Kotlin 1.9+ + Jetpack Compose, Coroutines/Flow, Android AccessibilityService, AlarmManager, ContentResolver (CalendarContract)
 - 002-epcube-macro-accessibility: Added Kotlin 1.9+ + Android AccessibilityService API, Kotlin Coroutines/Flow
 

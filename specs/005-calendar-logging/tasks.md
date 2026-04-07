@@ -99,11 +99,11 @@
 
 ### 実装: User Story 2
 
-- [ ] T013 [US2] `app/src/main/java/com/ghihin/epcubeoptimizer/automation/AutomationOrchestrator.kt` の失敗パス（`catch(e: Exception)` 内のフォールバック処理）を見直す。マクロ起動コードの前で例外が発生した場合（天気取得失敗等）はカレンダーに「❌」イベントを書き込んで正常終了する（T012 の検証・補強）
+- [x] T013 [US2] `app/src/main/java/com/ghihin/epcubeoptimizer/automation/AutomationOrchestrator.kt` の失敗パス（`catch(e: Exception)` 内のフォールバック処理）を見直す。マクロ起動コードの前で例外が発生した場合（天気取得失敗等）はカレンダーに「❌」イベントを書き込んで正常終了する（T012 の検証・補強）
 
-- [ ] T014 [US2] T011 で実装したタイムアウト時のカレンダー書き込み処理について、エラー理由が「マクロ応答タイムアウト (3分)」として説明欄に正しく表示されることをログで確認できるよう `Log.w(Config.LOG_TAG, ...)` を追加する
+- [x] T014 [US2] T011 で実装したタイムアウト時のカレンダー書き込み処理について、エラー理由が「マクロ応答タイムアウト (3分)」として説明欄に正しく表示されることをログで確認できるよう `Log.w(Config.LOG_TAG, ...)` を追加する
 
-- [ ] T015 [US2] `app/src/main/java/com/ghihin/epcubeoptimizer/calendar/CalendarLogWriter.kt` に `WRITE_CALENDAR` 権限が未付与の場合のガード処理を追加する。`ContextCompat.checkSelfPermission()` で権限確認し、未付与なら `Log.w` を出力して `false` を返す（例外は投げない）
+- [x] T015 [US2] `app/src/main/java/com/ghihin/epcubeoptimizer/calendar/CalendarLogWriter.kt` に `WRITE_CALENDAR` 権限が未付与の場合のガード処理を追加する。`ContextCompat.checkSelfPermission()` で権限確認し、未付与なら `Log.w` を出力して `false` を返す（例外は投げない）
 
 **Checkpoint**: 各種失敗シナリオで「❌ EPCUBE設定失敗」がカレンダーに登録される。US2 独立検証可能。
 
@@ -117,9 +117,9 @@
 
 ### 実装: User Story 3（重複防止の確実化）
 
-- [ ] T016 [US3] `app/src/main/java/com/ghihin/epcubeoptimizer/calendar/CalendarLogWriter.kt` の `isDuplicateEvent()` メソッドをデバッグログ付きで動作確認する。重複が検出された場合は `Log.i(Config.LOG_TAG, "重複イベント検出: INSERT をスキップします")` を出力し、ADBログで確認できるようにする
+- [x] T016 [US3] `app/src/main/java/com/ghihin/epcubeoptimizer/calendar/CalendarLogWriter.kt` の `isDuplicateEvent()` メソッドをデバッグログ付きで動作確認する。重複が検出された場合は `Log.i(Config.LOG_TAG, "重複イベント検出: INSERT をスキップします")` を出力し、ADBログで確認できるようにする
 
-- [ ] T017 [US3] `AutomationOrchestrator.kt` の受信処理内で、カレンダー書き込み結果（`writeExecutionResult()` の戻り値）をログに出力する: 成功 → `Log.i`、重複スキップ → `Log.i`、失敗 → `Log.e`
+- [x] T017 [US3] `AutomationOrchestrator.kt` の受信処理内で、カレンダー書き込み結果（`writeExecutionResult()` の戻り値）をログに出力する: 成功 → `Log.i`、重複スキップ → `Log.i`、失敗 → `Log.e`
 
 **Checkpoint**: 重複登録の防止が確認可能。週表示での履歴確認が可能。全 US 独立検証可能。
 
@@ -129,9 +129,9 @@
 
 **Purpose**: FR-008 — アプリ起動時の WRITE_CALENDAR 権限要求フロー。
 
-- [ ] T018 `app/src/main/java/com/ghihin/epcubeoptimizer/MainActivity.kt` を修正する。`ActivityResultContracts.RequestMultiplePermissions()` を使い `PermissionHelper.CALENDAR_PERMISSIONS` を一括要求するランチャーを定義し、`onCreate()` 内で `PermissionHelper.hasCalendarPermissions(this)` が `false` の場合に起動する
+- [x] T018 `app/src/main/java/com/ghihin/epcubeoptimizer/MainActivity.kt` を修正する。`ActivityResultContracts.RequestMultiplePermissions()` を使い `PermissionHelper.CALENDAR_PERMISSIONS` を一括要求するランチャーを定義し、`onCreate()` 内で `PermissionHelper.hasCalendarPermissions(this)` が `false` の場合に起動する
 
-- [ ] T019 `app/src/main/java/com/ghihin/epcubeoptimizer/presentation/main/MainScreen.kt` を修正する。権限が拒否された場合はSnackbarで「カレンダー権限が必要です。設定から許可してください。」と表示する。ただし権限なしでもアプリ本体（SOC設定）は継続動作する
+- [x] T019 `app/src/main/java/com/ghihin/epcubeoptimizer/presentation/main/MainScreen.kt` を修正する。権限が拒否された場合はSnackbarで「カレンダー権限が必要です。設定から許可してください。」と表示する。ただし権限なしでもアプリ本体（SOC設定）は継続動作する
 
 ---
 
@@ -139,7 +139,7 @@
 
 **Purpose**: `CalendarLogWriter` の核心ロジックを自動テストで保護する。
 
-- [ ] T020 [P] `app/src/test/java/com/ghihin/epcubeoptimizer/calendar/CalendarLogWriterTest.kt` を新規作成する。MockK + Robolectric を使い以下の5ケースをテストする:
+- [x] T020 [P] `app/src/test/java/com/ghihin/epcubeoptimizer/calendar/CalendarLogWriterTest.kt` を新規作成する。MockK + Robolectric を使い以下の5ケースをテストする:
   1. **重複チェック検出時**: `isDuplicateEvent()` が `true` を返すとき `insert()` が呼ばれないこと
   2. **成功イベント書き込み**: `isSuccess=true` のとき `insert()` の引数に `TITLE = "✅ EPCUBE設定完了"` が含まれること
   3. **失敗イベント書き込み**: `isSuccess=false` のとき `TITLE = "❌ EPCUBE設定失敗"` が含まれること
@@ -152,9 +152,9 @@
 
 **Purpose**: コードレビュー観点の最終確認と未対応の横断関心事。
 
-- [ ] T021 [P] 全変更ファイルのコードコメント（KDoc）を日本語で記述していることを確認する（`GEMINI.md` の言語要件を遵守）
-- [ ] T022 [P] `CalendarLogWriter.kt` の説明欄文字列長が400文字を超えないことを単体で確認する（SC-004）
-- [ ] T023 `plan.md` の Verification Plan に記載されたADBコマンドによる手動検証を実施し、成功・失敗・重複・権限拒否の4シナリオを確認する
+- [x] T021 [P] 全変更ファイルのコードコメント（KDoc）を日本語で記述していることを確認する（`GEMINI.md` の言語要件を遵守）
+- [x] T022 [P] `CalendarLogWriter.kt` の説明欄文字列長が400文字を超えないことを単体で確認する（SC-004）
+- [x] T023 `plan.md` の Verification Plan に記載されたADBコマンドによる手動検証を実施し、成功・失敗・重複・権限拒否の4シナリオを確認する
 
 ---
 

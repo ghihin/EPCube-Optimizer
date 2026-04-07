@@ -6,6 +6,7 @@ import android.content.Context
 import android.provider.CalendarContract
 import android.util.Log
 import com.ghihin.epcubeoptimizer.automation.Config
+import com.ghihin.epcubeoptimizer.core.permission.PermissionHelper
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -20,7 +21,12 @@ class CalendarLogWriter @Inject constructor(
 
     private val contentResolver: ContentResolver = context.contentResolver
 
-    suspend fun writeExecutionResult(event: ExecutionCalendarEvent): Boolean = withContext(Dispatchers.IO) {
+    suspend fun writeExecutionResult(event: ExecutionCalendarEvent, ignoreDuplicate: Boolean = false): Boolean = withContext(Dispatchers.IO) {
+        if (!PermissionHelper.hasCalendarPermissions(context)) {
+            Log.w(Config.LOG_TAG, "WRITE_CALENDAR permission not granted. Skipping calendar logging.")
+            return@withContext false
+        }
+
         try {
             val calendarId = getDefaultCalendarId()
             if (calendarId == null) {
@@ -28,7 +34,7 @@ class CalendarLogWriter @Inject constructor(
                 return@withContext false
             }
 
-            if (isDuplicateEvent(event.executionTimeMillis)) {
+            if (!ignoreDuplicate && isDuplicateEvent(event.executionTimeMillis)) {
                 Log.i(Config.LOG_TAG, "重複イベント検出: INSERT をスキップします")
                 return@withContext false
             }
@@ -50,8 +56,18 @@ class CalendarLogWriter @Inject constructor(
     }
 
     private suspend fun getDefaultCalendarId(): Long? = withContext(Dispatchers.IO) {
-        val projection = arrayOf(CalendarContract.Calendars._ID)
-        val selection = "${CalendarContract.Calendars.IS_PRIMARY} = 1 OR ${CalendarContract.Calendars.VISIBLE} = 1"
+        val projection = arrayOf(
+            CalendarContract.Calendars._ID,
+            CalendarContract.Calendars.ACCOUNT_TYPE,
+            CalendarContract.Calendars.IS_PRIMARY,
+            CalendarContract.Calendars.ACCOUNT_NAME
+        )
+        // 表示中のカレンダーのみに絞る
+        val selection = "${CalendarContract.Calendars.VISIBLE} = 1"
+        
+        var bestId: Long? = null
+        var fallbackGoogleId: Long? = null
+        var fallbackId: Long? = null
         
         try {
             contentResolver.query(
@@ -61,14 +77,34 @@ class CalendarLogWriter @Inject constructor(
                 null,
                 null
             )?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    return@withContext cursor.getLong(0)
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(0)
+                    val accountType = cursor.getString(1)
+                    val isPrimary = cursor.getInt(2) == 1
+                    val accountName = cursor.getString(3)
+                    
+                    if (fallbackId == null) fallbackId = id
+                    
+                    if (accountType == "com.google") {
+                        if (fallbackGoogleId == null) fallbackGoogleId = id
+                        
+                        // メイン設定に一致するプライマリカレンダーを最優先
+                        if (accountName == Config.TARGET_CALENDAR_ACCOUNT_NAME && isPrimary) {
+                            bestId = id
+                            break // 最適なGoogleメインカレンダーを見つけた
+                        } else if (isPrimary && bestId == null) {
+                            // サブアカウントのPrimary用
+                            bestId = id
+                        }
+                    }
                 }
             }
         } catch (e: Exception) {
             Log.e(Config.LOG_TAG, "Failed to query calendar ID", e)
         }
-        null
+        
+        // 優先度: ghihin(Primary) > サブGoogle(Primary) > 何らかのGoogle > 何らかの見えてるカレンダー
+        return@withContext bestId ?: fallbackGoogleId ?: fallbackId
     }
 
     private suspend fun isDuplicateEvent(timeMillis: Long): Boolean = withContext(Dispatchers.IO) {

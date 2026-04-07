@@ -13,4 +13,7 @@ object Config {
 
     // デバッグ・テスト用のログタグ
     const val LOG_TAG = "EcoAutomation"
+
+    // 書き込み対象のGoogleカレンダーアカウント名
+    const val TARGET_CALENDAR_ACCOUNT_NAME = "ghihin@gmail.com"
 }
