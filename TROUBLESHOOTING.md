@@ -104,3 +104,35 @@ $env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
 - `app/build/reports/tests/testDebugUnitTest/index.html`
 - `app/build/reports/tests/testReleaseUnitTest/index.html`
 
+---
+
+## 3. AndroidカレンダーAPIにおける「繰り返しイベント」の取得仕様
+
+**症状**:
+Googleカレンダー上で「毎週金曜日」のような繰り返し設定（Recurring event）でイベントを登録した際、Androidのアプリ内から `CalendarContract.Events.CONTENT_URI` をクエリしても該当日の予定として展開されず取得・検索に失敗する。
+
+**原因**:
+Androidの仕様により、`Events` テーブルは「イベントの大元の定義（1つのレコード）」しか保持していません。そのため、無限に続く繰り返しイベントの `DTSTART` （開始日時）は初回の予定日のまま固定されており、「指定した日付（例えば明日）内に存在するイベント」として検索しても取得対象から除外されてしまいます。
+
+**解決策**:
+繰り返しイベントを展開した状態で検索するためには、**`CalendarContract.Instances.CONTENT_URI`** を使用する必要があります。
+
+```kotlin
+val uriBuilder = CalendarContract.Instances.CONTENT_URI.buildUpon()
+ContentUris.appendId(uriBuilder, startMillis)
+ContentUris.appendId(uriBuilder, endMillis)
+
+val projection = arrayOf(
+    CalendarContract.Instances.TITLE,
+    CalendarContract.Instances.BEGIN
+)
+
+context.contentResolver.query(
+    uriBuilder.build(),
+    projection,
+    null,
+    null,
+    "${CalendarContract.Instances.BEGIN} ASC"
+)
+```
+この実装を用いることで、Androidシステム側でよしなに単発予定だけでなく繰り返し予定も「その期間内のすべての日付」に展開（Unroll）された状態で取得・検索することが可能になり、漏れなく日々のスケジュール判定へ利用することができます。

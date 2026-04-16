@@ -1,21 +1,20 @@
 package com.ghihin.epcubeoptimizer.data.repository
 
-import com.ghihin.epcubeoptimizer.core.network.OpenWeatherMapApi
+import com.ghihin.epcubeoptimizer.core.network.OpenMeteoApi
 import com.ghihin.epcubeoptimizer.domain.model.WeatherForecast
 import com.ghihin.epcubeoptimizer.domain.repository.WeatherRepository
-import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
-import javax.inject.Named
 
 /**
  * [WeatherRepository] の実装。
- * OpenWeatherMap Forecast API から翌日の天気予報を取得し、ドメインモデルに変換する。
+ * Open-Meteo API から翌日の天気予報（短波放射量）を取得し、ドメインモデルに変換する。
  */
 class WeatherRepositoryImpl @Inject constructor(
-    private val api: OpenWeatherMapApi,
-    @Named("apiKey") private val apiKey: String,
+    private val api: OpenMeteoApi,
     private val zoneId: ZoneId = ZoneId.systemDefault()
 ) : WeatherRepository {
 
@@ -25,39 +24,38 @@ class WeatherRepositoryImpl @Inject constructor(
 
     override suspend fun getWeatherForecast(lat: Double, lon: Double): Result<WeatherForecast> {
         return try {
-            val response = api.getForecast(lat, lon, apiKey)
+            val response = api.getForecast(lat, lon)
 
             // 翌日の日付を取得
             val tomorrow = LocalDate.now(zoneId).plusDays(1)
+            val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
-            // 翌日に該当する予報アイテムを絞り込む
-            val tomorrowItems = response.list.filter { item ->
-                val itemDate = Instant.ofEpochSecond(item.dt)
-                    .atZone(zoneId)
-                    .toLocalDate()
-                itemDate == tomorrow
+            var sumRadiation = 0.0
+            var count = 0
+
+            for (i in response.hourly.time.indices) {
+                val timeStr = response.hourly.time[i]
+                val radiation = response.hourly.shortwaveRadiation[i]
+
+                val localDateTime = LocalDateTime.parse(timeStr, formatter)
+                if (localDateTime.toLocalDate() == tomorrow) {
+                    // 08:00 〜 15:59 までのデータを合算 (8〜15の8時間)
+                    if (localDateTime.hour in 8..15) {
+                        sumRadiation += radiation
+                        count++
+                    }
+                }
             }
 
-            // 翌日データが存在しない場合はリスト先頭のデータにフォールバック
-            val targetItems = tomorrowItems.ifEmpty { response.list.take(1) }
-
-            if (targetItems.isEmpty()) {
-                return Result.failure(IllegalStateException("天気予報データが取得できませんでした"))
+            if (count == 0) {
+                return Result.failure(IllegalStateException("該当時間帯の天気予報データが見つかりませんでした"))
             }
-
-            // 翌日全体の最大雲量と最大降水確率をそれぞれ代表値として使用
-            val maxCloudiness = targetItems.maxOf { it.clouds.all }
-            val maxPop = targetItems.maxOf { it.pop }
-            
-            // 天気の説明を取得（最も頻出するもの、または最初のもの）
-            val weatherDescription = targetItems.firstOrNull()?.weather?.firstOrNull()?.description ?: ""
 
             Result.success(
                 WeatherForecast(
                     date = tomorrow,
-                    cloudiness = maxCloudiness,
-                    probabilityOfPrecipitation = maxPop,
-                    weatherDescription = weatherDescription
+                    shortwaveRadiationSum = sumRadiation,
+                    weatherDescription = "日射量合計: ${sumRadiation.toInt()} W/m²・h"
                 )
             )
         } catch (e: Exception) {
@@ -66,30 +64,33 @@ class WeatherRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getWeatherForecast(date: LocalDate): WeatherForecast {
-        val response = api.getForecast(defaultLat, defaultLon, apiKey)
+        val response = api.getForecast(defaultLat, defaultLon)
 
-        val targetItems = response.list.filter { item ->
-            val itemDate = Instant.ofEpochSecond(item.dt)
-                .atZone(zoneId)
-                .toLocalDate()
-            itemDate == date
+        val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+        var sumRadiation = 0.0
+        var count = 0
+
+        for (i in response.hourly.time.indices) {
+            val timeStr = response.hourly.time[i]
+            val radiation = response.hourly.shortwaveRadiation[i]
+
+            val localDateTime = LocalDateTime.parse(timeStr, formatter)
+            if (localDateTime.toLocalDate() == date) {
+                if (localDateTime.hour in 8..15) {
+                    sumRadiation += radiation
+                    count++
+                }
+            }
         }
 
-        val itemsToUse = targetItems.ifEmpty { response.list.take(1) }
-
-        if (itemsToUse.isEmpty()) {
-            throw IllegalStateException("天気予報データが取得できませんでした")
+        if (count == 0) {
+            throw IllegalStateException("該当時間帯の天気予報データが見つかりませんでした")
         }
-
-        val maxCloudiness = itemsToUse.maxOf { it.clouds.all }
-        val maxPop = itemsToUse.maxOf { it.pop }
-        val weatherDescription = itemsToUse.firstOrNull()?.weather?.firstOrNull()?.description ?: ""
 
         return WeatherForecast(
             date = date,
-            cloudiness = maxCloudiness,
-            probabilityOfPrecipitation = maxPop,
-            weatherDescription = weatherDescription
+            shortwaveRadiationSum = sumRadiation,
+            weatherDescription = "日射量合計: ${sumRadiation.toInt()} W/m²・h"
         )
     }
 }

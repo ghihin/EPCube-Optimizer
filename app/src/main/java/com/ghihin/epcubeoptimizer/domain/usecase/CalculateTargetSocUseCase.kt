@@ -13,8 +13,32 @@ import javax.inject.Inject
 class CalculateTargetSocUseCase @Inject constructor(
     private val weatherRepository: WeatherRepository
 ) {
+    companion object {
+        // 積算日射量(W/m²・h)の判定閾値定数
+        const val THRESHOLD_SUNNY = 4000.0
+        const val THRESHOLD_CLOUDY = 2000.0
 
-    // 既存のメソッド（後方互換性のため残すか、テスト修正が必要）
+        // 中間期のSOC (春〜初夏・秋: 4〜6月, 10〜11月等)
+        const val SOC_SPRING_SUNNY_ALL = 60
+        const val SOC_SPRING_CLOUDY_HOME = 70
+        const val SOC_SPRING_CLOUDY_COMMUTE = 60
+        const val SOC_SPRING_RAIN_HOME = 100
+        const val SOC_SPRING_RAIN_COMMUTE = 80
+
+        // 夏季のSOC (7-9月)
+        const val SOC_SUMMER_SUNNY_HOME = 80
+        const val SOC_SUMMER_SUNNY_COMMUTE = 60
+        const val SOC_SUMMER_RAIN_HOME = 100
+        const val SOC_SUMMER_RAIN_COMMUTE = 90
+
+        // 冬季のSOC (12-3月)
+        const val SOC_WINTER_SUNNY_HOME = 100
+        const val SOC_WINTER_SUNNY_COMMUTE = 70
+        const val SOC_WINTER_RAIN_HOME = 100
+        const val SOC_WINTER_RAIN_COMMUTE = 90
+    }
+
+    // 既存のメソッド（後方互換性のため残すが、基本はDailySchedule版を使用）
     operator fun invoke(
         forecast: WeatherForecast,
         schedule: UserSchedule,
@@ -24,81 +48,67 @@ class CalculateTargetSocUseCase @Inject constructor(
         return calculateInternal(forecast, isCommuteDay, targetDate)
     }
 
-    // DailyScheduleを受け取る新しいメソッド
     suspend operator fun invoke(schedule: DailySchedule): TargetSocResult {
-        val forecast = try {
+        val forecastResult = try {
             weatherRepository.getWeatherForecast(schedule.date)
         } catch (e: Exception) {
             null
         }
 
-        val targetSoc = if (forecast != null) {
-            calculateInternal(forecast, schedule.isCommute, schedule.date).value
-        } else {
-            // 天気取得失敗時のフォールバック
-            if (schedule.isCommute) 100 else 60
+        // 1) APIエラー時のフェイルセーフ: 100%固定
+        if (forecastResult == null) {
+            return TargetSocResult(
+                targetSoc = 100,
+                weatherForecast = null,
+                isSunnyTomorrow = false // エラー時はスマートモードへのフォールバックとして安全運用
+            )
         }
 
-        val isSunny = if (forecast != null) {
-            forecast.cloudiness <= 30 && forecast.probabilityOfPrecipitation < 0.2f
-        } else false
+        // 2) 対象日のTarget SOCを算出
+        val targetSoc = calculateInternal(forecastResult, schedule.isCommute, schedule.date)
 
-        return TargetSocResult(targetSoc, forecast, isSunny)
+        // 3) isSunnyTomorrowの算出 (マクロ用) => THRESHOLD_SUNNY 以上なら true にマッピングして互換性を維持
+        val isSunny = forecastResult.shortwaveRadiationSum >= THRESHOLD_SUNNY
+
+        return TargetSocResult(targetSoc.value, forecastResult, isSunny)
     }
 
     private fun calculateInternal(forecast: WeatherForecast, isCommuteDay: Boolean, targetDate: LocalDate): TargetSOC {
-        val cloudiness = forecast.cloudiness
-        val pop = forecast.probabilityOfPrecipitation
-        
-        // 晴れの判定（雲量30%以下かつ降水確率20%未満）
-        val isSunny = cloudiness <= 30 && pop < 0.2f
+        val radiationSum = forecast.shortwaveRadiationSum
 
-        // 季節の判定
         val month = targetDate.month
         val isWinter = month == Month.DECEMBER || month == Month.JANUARY || month == Month.FEBRUARY || month == Month.MARCH
         val isSummer = month == Month.JULY || month == Month.AUGUST || month == Month.SEPTEMBER
 
         val baseSoc = when {
             isWinter -> {
-                // 冬場（エアコン利用頻度多め、日照量少な目）
                 when {
-                    !isCommuteDay && isSunny -> 100
-                    isCommuteDay && isSunny -> 70
-                    !isCommuteDay && !isSunny -> 100
-                    isCommuteDay && !isSunny -> 90
-                    else -> 100
+                    radiationSum >= THRESHOLD_SUNNY -> if (isCommuteDay) SOC_WINTER_SUNNY_COMMUTE else SOC_WINTER_SUNNY_HOME
+                    else -> if (isCommuteDay) SOC_WINTER_RAIN_COMMUTE else SOC_WINTER_RAIN_HOME
                 }
             }
             isSummer -> {
-                // 夏場（エアコン利用頻度多め、深夜の電気料金が安い時間もエアコンつけっぱなし、日照量多め）
                 when {
-                    !isCommuteDay && isSunny -> 80
-                    isCommuteDay && isSunny -> 60
-                    !isCommuteDay && !isSunny -> 100
-                    isCommuteDay && !isSunny -> 90
-                    else -> 80
+                    radiationSum >= THRESHOLD_SUNNY -> if (isCommuteDay) SOC_SUMMER_SUNNY_COMMUTE else SOC_SUMMER_SUNNY_HOME
+                    else -> if (isCommuteDay) SOC_SUMMER_RAIN_COMMUTE else SOC_SUMMER_RAIN_HOME
                 }
             }
             else -> {
-                // 春・秋（エアコン利用頻度減、充電量増）
+                // 中間期
                 when {
-                    !isCommuteDay && isSunny -> 70
-                    isCommuteDay && isSunny -> 60
-                    !isCommuteDay && !isSunny -> 80
-                    isCommuteDay && !isSunny -> 70
-                    else -> 70
+                    radiationSum >= THRESHOLD_SUNNY -> SOC_SPRING_SUNNY_ALL
+                    radiationSum >= THRESHOLD_CLOUDY -> if (isCommuteDay) SOC_SPRING_CLOUDY_COMMUTE else SOC_SPRING_CLOUDY_HOME
+                    else -> if (isCommuteDay) SOC_SPRING_RAIN_COMMUTE else SOC_SPRING_RAIN_HOME
                 }
             }
         }
 
-        // 下限値の適用 (EP CUBEの仕様により最低60%)
         val finalSoc = maxOf(60, baseSoc)
 
         return TargetSOC(
             value = finalSoc,
             factors = CalculationFactors(
-                cloudiness = cloudiness,
-                pop = pop,
+                shortwaveRadiationSum = radiationSum,
                 isCommuteDay = isCommuteDay
             )
         )

@@ -6,18 +6,6 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
-// local.properties から APIキーを読み込む
-// Kotlin DSL では java.util が参照できないため File を直読みしてパースする
-fun readLocalProperty(key: String): String {
-    val localPropsFile = rootProject.file("local.properties")
-    if (!localPropsFile.exists()) return ""
-    return localPropsFile.readLines()
-        .firstOrNull { it.startsWith("$key=") }
-        ?.substringAfter("=")
-        ?.trim()
-        ?: ""
-}
-val openWeatherMapApiKey: String = readLocalProperty("OPEN_WEATHER_MAP_API_KEY")
 
 android {
     namespace = "com.ghihin.epcubeoptimizer"
@@ -35,8 +23,6 @@ android {
             useSupportLibrary = true
         }
 
-        // local.properties の OPEN_WEATHER_MAP_API_KEY を BuildConfig に埋め込む
-        buildConfigField("String", "OPEN_WEATHER_MAP_API_KEY", "\"$openWeatherMapApiKey\"")
     }
 
     buildTypes {

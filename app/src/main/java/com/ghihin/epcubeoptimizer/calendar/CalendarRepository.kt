@@ -1,5 +1,6 @@
 package com.ghihin.epcubeoptimizer.calendar
 
+import android.content.ContentUris
 import android.content.Context
 import android.provider.CalendarContract
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -20,23 +21,24 @@ class CalendarRepository @Inject constructor(
         val endMillis = startMillis + days * 24 * 60 * 60 * 1000L
 
         val projection = arrayOf(
-            CalendarContract.Events.TITLE,
-            CalendarContract.Events.DTSTART
+            CalendarContract.Instances.TITLE,
+            CalendarContract.Instances.BEGIN
         )
 
-        val selection = "${CalendarContract.Events.DTSTART} >= ? AND ${CalendarContract.Events.DTSTART} <= ?"
-        val selectionArgs = arrayOf(startMillis.toString(), endMillis.toString())
+        val uriBuilder = CalendarContract.Instances.CONTENT_URI.buildUpon()
+        ContentUris.appendId(uriBuilder, startMillis)
+        ContentUris.appendId(uriBuilder, endMillis)
 
         try {
             context.contentResolver.query(
-                CalendarContract.Events.CONTENT_URI,
+                uriBuilder.build(),
                 projection,
-                selection,
-                selectionArgs,
-                "${CalendarContract.Events.DTSTART} ASC"
+                null,
+                null,
+                "${CalendarContract.Instances.BEGIN} ASC"
             )?.use { cursor ->
-                val titleIndex = cursor.getColumnIndexOrThrow(CalendarContract.Events.TITLE)
-                val startIndex = cursor.getColumnIndexOrThrow(CalendarContract.Events.DTSTART)
+                val titleIndex = cursor.getColumnIndexOrThrow(CalendarContract.Instances.TITLE)
+                val startIndex = cursor.getColumnIndexOrThrow(CalendarContract.Instances.BEGIN)
 
                 while (cursor.moveToNext()) {
                     val title = cursor.getString(titleIndex) ?: ""

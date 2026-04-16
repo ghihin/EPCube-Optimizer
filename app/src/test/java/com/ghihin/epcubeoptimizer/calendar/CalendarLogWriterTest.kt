@@ -94,8 +94,7 @@ class CalendarLogWriterTest {
         preExecSoc = 50,
         preExecMode = "グリーンモード",
         weatherDescription = "晴れ",
-        cloudiness = 10,
-        precipitationProbability = 0.2f
+        shortwaveRadiationSum = 4500.0
     )
 
     @Test
@@ -172,7 +171,7 @@ class CalendarLogWriterTest {
         setupMockDuplicateCheck(isDuplicate = false)
         every { contentResolver.insert(CalendarContract.Events.CONTENT_URI, any()) } returns Uri.parse("content://dummy/4")
 
-        val missingDataEvent = baseEvent.copy(preExecSoc = null, preExecMode = null, cloudiness = null)
+        val missingDataEvent = baseEvent.copy(preExecSoc = null, preExecMode = null, shortwaveRadiationSum = null)
         
         calendarLogWriter.writeExecutionResult(missingDataEvent)
 
@@ -182,6 +181,6 @@ class CalendarLogWriterTest {
         val description = valuesSlot.captured.getAsString(CalendarContract.Events.DESCRIPTION)
         assertTrue("Should denote 取得不可 for missing soc", description.contains("取得SOC: 取得不可"))
         assertTrue("Should denote 取得不可 for missing mode", description.contains("運転モード: 取得不可"))
-        assertTrue("Should denote 取得不可 for missing cloudiness", description.contains("雲量: 取得不可"))
+        assertTrue("Should denote 取得不可 for missing radiation", description.contains("予想日射量: 取得不可"))
     }
 }

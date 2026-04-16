@@ -23,7 +23,7 @@ class ScheduleAnalyzer @Inject constructor() {
             }
 
             // "出社"が含まれていれば外出モード（true）
-            val isCommute = eventsForDay.any { it.title.contains("【出社】") }
+            val isCommute = eventsForDay.any { it.title.contains("出社") }
 
             schedules.add(DailySchedule(date = targetDate, isCommute = isCommute))
         }

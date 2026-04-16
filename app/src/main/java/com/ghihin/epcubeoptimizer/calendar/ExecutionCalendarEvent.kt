@@ -9,6 +9,5 @@ data class ExecutionCalendarEvent(
     val preExecSoc: Int?,
     val preExecMode: String?,
     val weatherDescription: String?,
-    val cloudiness: Int?,
-    val precipitationProbability: Float?
+    val shortwaveRadiationSum: Double?
 )

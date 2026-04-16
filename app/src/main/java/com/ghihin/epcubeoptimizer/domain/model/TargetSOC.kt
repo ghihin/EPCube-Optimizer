@@ -10,7 +10,6 @@ data class TargetSOC(
 }
 
 data class CalculationFactors(
-    val cloudiness: Int,
-    val pop: Float,
+    val shortwaveRadiationSum: Double,
     val isCommuteDay: Boolean
 )

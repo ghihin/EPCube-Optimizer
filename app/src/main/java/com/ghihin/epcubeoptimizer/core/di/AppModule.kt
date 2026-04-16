@@ -6,7 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.ghihin.epcubeoptimizer.BuildConfig
 import com.ghihin.epcubeoptimizer.calendar.CalendarLogWriter
-import com.ghihin.epcubeoptimizer.core.network.OpenWeatherMapApi
+import com.ghihin.epcubeoptimizer.core.network.OpenMeteoApi
 import com.ghihin.epcubeoptimizer.data.repository.ScheduleRepositoryImpl
 import com.ghihin.epcubeoptimizer.data.repository.WeatherRepositoryImpl
 import com.ghihin.epcubeoptimizer.domain.repository.ScheduleRepository
@@ -58,7 +58,7 @@ object NetworkModule {
     fun provideRetrofit(okHttpClient: OkHttpClient, json: Json): Retrofit {
         val contentType = "application/json".toMediaType()
         return Retrofit.Builder()
-            .baseUrl("https://api.openweathermap.org/")
+            .baseUrl("https://api.open-meteo.com/")
             .client(okHttpClient)
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()
@@ -66,12 +66,8 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOpenWeatherMapApi(retrofit: Retrofit): OpenWeatherMapApi =
-        retrofit.create(OpenWeatherMapApi::class.java)
-
-    @Provides
-    @Named("apiKey")
-    fun provideApiKey(): String = BuildConfig.OPEN_WEATHER_MAP_API_KEY
+    fun provideOpenMeteoApi(retrofit: Retrofit): OpenMeteoApi =
+        retrofit.create(OpenMeteoApi::class.java)
 
     @Provides
     @Singleton

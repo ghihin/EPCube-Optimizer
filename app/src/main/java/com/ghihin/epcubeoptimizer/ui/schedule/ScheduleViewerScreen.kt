@@ -163,7 +163,7 @@ fun ScheduleItemCard(schedule: DailySchedule) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "雲量: ${weather.cloudiness}% / 降水確率: ${(weather.probabilityOfPrecipitation * 100).toInt()}%",
+                        text = "予想日射量: ${weather.shortwaveRadiationSum.toInt()} W/m²・h",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                     )

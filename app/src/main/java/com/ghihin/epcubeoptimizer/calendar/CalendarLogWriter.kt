@@ -150,8 +150,7 @@ class CalendarLogWriter @Inject constructor(
         val preExecSocStr = event.preExecSoc?.takeIf { it != -1 }?.toString()?.let { "$it%" } ?: "取得不可"
         val preExecModeStr = event.preExecMode ?: "取得不可"
         val weatherDescStr = event.weatherDescription ?: "取得不可"
-        val cloudinessStr = event.cloudiness?.toString()?.let { "$it%" } ?: "取得不可"
-        val precipStr = event.precipitationProbability?.let { "${(it * 100).toInt()}%" } ?: "取得不可"
+        val radiationStr = event.shortwaveRadiationSum?.let { "${it.toInt()} W/m²・h" } ?: "取得不可"
 
         val sb = StringBuilder()
         sb.append("【実行結果】\n")
@@ -165,8 +164,7 @@ class CalendarLogWriter @Inject constructor(
         sb.append("運転モード: $preExecModeStr\n")
         sb.append("\n【気象条件 (明日)】\n")
         sb.append("天気: $weatherDescStr\n")
-        sb.append("雲量: $cloudinessStr\n")
-        sb.append("降水確率: $precipStr")
+        sb.append("予想日射量: $radiationStr")
 
         val desc = sb.toString()
         // Ensure description does not exceed 400 characters (SC-004)

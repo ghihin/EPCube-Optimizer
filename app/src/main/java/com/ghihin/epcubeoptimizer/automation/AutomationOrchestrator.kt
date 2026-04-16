@@ -78,8 +78,7 @@ class AutomationOrchestrator @Inject constructor(
                                         preExecSoc = preExecSoc,
                                         preExecMode = preExecMode,
                                         weatherDescription = forecast?.weatherDescription,
-                                        cloudiness = forecast?.cloudiness,
-                                        precipitationProbability = forecast?.probabilityOfPrecipitation
+                                        shortwaveRadiationSum = forecast?.shortwaveRadiationSum
                                     )
                                     
                                     // 解除 (T010 リソースリーク対策)
@@ -149,8 +148,7 @@ class AutomationOrchestrator @Inject constructor(
                         preExecSoc = null,
                         preExecMode = null,
                         weatherDescription = forecast?.weatherDescription,
-                        cloudiness = forecast?.cloudiness,
-                        precipitationProbability = forecast?.probabilityOfPrecipitation
+                        shortwaveRadiationSum = forecast?.shortwaveRadiationSum
                     )
                     calendarLogWriter.writeExecutionResult(timeoutEvent)
                 }
@@ -168,8 +166,7 @@ class AutomationOrchestrator @Inject constructor(
                     preExecSoc = null,
                     preExecMode = null,
                     weatherDescription = null,
-                    cloudiness = null,
-                    precipitationProbability = null
+                    shortwaveRadiationSum = null
                 )
                 calendarLogWriter.writeExecutionResult(fallbackEvent)
                 

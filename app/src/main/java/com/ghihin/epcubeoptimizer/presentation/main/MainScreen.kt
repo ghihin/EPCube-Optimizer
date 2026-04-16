@@ -157,11 +157,7 @@ private fun SuccessContent(
                     text = "☁️ 明日の天気（鶴ヶ島市）",
                     style = MaterialTheme.typography.labelLarge
                 )
-                InfoRow(label = "雲量", value = "${state.forecast.cloudiness}%")
-                InfoRow(
-                    label = "降水確率",
-                    value = "${"%.0f".format(state.forecast.probabilityOfPrecipitation * 100)}%"
-                )
+                InfoRow(label = "日射量", value = "${state.forecast.shortwaveRadiationSum.toInt()} W/m²・h")
             }
         }
 
@@ -205,8 +201,7 @@ private fun SuccessContent(
 
         // 計算根拠
         Text(
-            text = "計算根拠: 雲量 ${state.targetSoc.factors.cloudiness}%・" +
-                "降水確率 ${"%.0f".format(state.targetSoc.factors.pop * 100)}%・" +
+            text = "計算根拠: 日射量 ${state.targetSoc.factors.shortwaveRadiationSum.toInt()} W/m²・h・" +
                 "スケジュール ${if (state.targetSoc.factors.isCommuteDay) "出社" else "在宅"}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant

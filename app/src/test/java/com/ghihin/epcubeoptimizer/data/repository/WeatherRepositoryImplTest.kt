@@ -1,106 +1,72 @@
 package com.ghihin.epcubeoptimizer.data.repository
 
-import com.ghihin.epcubeoptimizer.core.network.Clouds
-import com.ghihin.epcubeoptimizer.core.network.ForecastItem
-import com.ghihin.epcubeoptimizer.core.network.OpenWeatherMapApi
-import com.ghihin.epcubeoptimizer.core.network.WeatherCondition as ApiWeatherCondition
-import com.ghihin.epcubeoptimizer.core.network.WeatherResponse
+import com.ghihin.epcubeoptimizer.core.network.HourlyData
+import com.ghihin.epcubeoptimizer.core.network.OpenMeteoApi
+import com.ghihin.epcubeoptimizer.core.network.OpenMeteoResponse
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
-/**
- * [WeatherRepositoryImpl] の単体テスト。
- * OpenWeatherMapApi をスタブで差し替えてロジックを検証する。
- */
 class WeatherRepositoryImplTest {
 
     private val fixedZone: ZoneId = ZoneOffset.UTC
 
-    /**
-     * 翌日のUNIXタイムスタンプを生成するヘルパー。
-     */
-    private fun tomorrowEpoch(): Long {
+    @Test
+    fun `getWeatherForecast - 翌日08時から15時の短波放射量を合算して返す`() = runBlocking {
         val tomorrow = LocalDate.now(fixedZone).plusDays(1)
-        return tomorrow.atStartOfDay(fixedZone).toEpochSecond()
-    }
-
-    @Test
-    fun `getWeatherForecast - 翌日データが存在する場合、最大雲量と最大降水確率を返す`() = runBlocking {
-        val dt = tomorrowEpoch()
-        val mockApi = object : OpenWeatherMapApi {
+        val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+        
+        val timeList = mutableListOf<String>()
+        val radList = mutableListOf<Double>()
+        
+        // 0時から23時までのデータを作る
+        for (i in 0..23) {
+            val ldt = tomorrow.atTime(i, 0)
+            timeList.add(ldt.format(formatter))
+            
+            // 8時〜15時までは 500.0, それ以外は 0.0 とする
+            if (i in 8..15) {
+                radList.add(500.0)
+            } else {
+                radList.add(0.0)
+            }
+        }
+        
+        val mockApi = object : OpenMeteoApi {
             override suspend fun getForecast(
-                lat: Double, lon: Double, apiKey: String, units: String, lang: String
-            ): WeatherResponse = WeatherResponse(
-                list = listOf(
-                    ForecastItem(
-                        dt = dt,
-                        weather = listOf(ApiWeatherCondition(800, "Clear", "clear sky", "01d")),
-                        clouds = Clouds(all = 10),
-                        pop = 0.0f
-                    ),
-                    ForecastItem(
-                        dt = dt + 10800, // +3時間
-                        weather = listOf(ApiWeatherCondition(500, "Rain", "light rain", "10d")),
-                        clouds = Clouds(all = 80),
-                        pop = 0.6f
-                    )
-                )
+                latitude: Double, longitude: Double, hourly: String, timezone: String
+            ): OpenMeteoResponse = OpenMeteoResponse(
+                hourly = HourlyData(time = timeList, shortwaveRadiation = radList)
             )
         }
 
-        val repository = WeatherRepositoryImpl(mockApi, "dummy_key", fixedZone)
+        val repository = WeatherRepositoryImpl(mockApi, fixedZone)
         val result = repository.getWeatherForecast(0.0, 0.0)
 
         assertTrue("成功でなければならない", result.isSuccess)
         val forecast = result.getOrNull()!!
-        assertEquals("最大雲量は80", 80, forecast.cloudiness)
-        assertEquals("最大降水確率は0.6f", 0.6f, forecast.probabilityOfPrecipitation)
-        assertEquals("日付は翌日", LocalDate.now(fixedZone).plusDays(1), forecast.date)
+        
+        // 500.0 が 8時間分 で 4000.0
+        assertEquals(4000.0, forecast.shortwaveRadiationSum, 0.1)
+        assertEquals("日付は翌日", tomorrow, forecast.date)
     }
 
     @Test
-    fun `getWeatherForecast - 翌日データが存在しない場合、先頭データにフォールバックする`() = runBlocking {
-        // 今日または過去のタイムスタンプだけを返す（翌日データなし）
-        val today = LocalDate.now(fixedZone).atStartOfDay(fixedZone).toEpochSecond()
-        val mockApi = object : OpenWeatherMapApi {
+    fun `getWeatherForecast - データがない場合は失敗を返す`() = runBlocking {
+        val mockApi = object : OpenMeteoApi {
             override suspend fun getForecast(
-                lat: Double, lon: Double, apiKey: String, units: String, lang: String
-            ): WeatherResponse = WeatherResponse(
-                list = listOf(
-                    ForecastItem(
-                        dt = today,
-                        weather = listOf(ApiWeatherCondition(801, "Clouds", "few clouds", "02d")),
-                        clouds = Clouds(all = 25),
-                        pop = 0.1f
-                    )
-                )
+                latitude: Double, longitude: Double, hourly: String, timezone: String
+            ): OpenMeteoResponse = OpenMeteoResponse(
+                hourly = HourlyData(time = emptyList(), shortwaveRadiation = emptyList())
             )
         }
 
-        val repository = WeatherRepositoryImpl(mockApi, "dummy_key", fixedZone)
-        val result = repository.getWeatherForecast(0.0, 0.0)
-
-        assertTrue("成功でなければならない", result.isSuccess)
-        val forecast = result.getOrNull()!!
-        assertEquals("フォールバック時の雲量は25", 25, forecast.cloudiness)
-        assertEquals("フォールバック時の降水確率は0.1f", 0.1f, forecast.probabilityOfPrecipitation)
-    }
-
-    @Test
-    fun `getWeatherForecast - APIリストが空の場合、失敗を返す`() = runBlocking {
-        val mockApi = object : OpenWeatherMapApi {
-            override suspend fun getForecast(
-                lat: Double, lon: Double, apiKey: String, units: String, lang: String
-            ): WeatherResponse = WeatherResponse(list = emptyList())
-        }
-
-        val repository = WeatherRepositoryImpl(mockApi, "dummy_key", fixedZone)
+        val repository = WeatherRepositoryImpl(mockApi, fixedZone)
         val result = repository.getWeatherForecast(0.0, 0.0)
 
         assertTrue("失敗でなければならない", result.isFailure)
@@ -108,13 +74,13 @@ class WeatherRepositoryImplTest {
 
     @Test
     fun `getWeatherForecast - API例外発生時、失敗を返す`() = runBlocking {
-        val mockApi = object : OpenWeatherMapApi {
+        val mockApi = object : OpenMeteoApi {
             override suspend fun getForecast(
-                lat: Double, lon: Double, apiKey: String, units: String, lang: String
-            ): WeatherResponse = throw RuntimeException("ネットワークエラー")
+                latitude: Double, longitude: Double, hourly: String, timezone: String
+            ): OpenMeteoResponse = throw RuntimeException("ネットワークエラー")
         }
 
-        val repository = WeatherRepositoryImpl(mockApi, "dummy_key", fixedZone)
+        val repository = WeatherRepositoryImpl(mockApi, fixedZone)
         val result = repository.getWeatherForecast(0.0, 0.0)
 
         assertTrue("失敗でなければならない", result.isFailure)

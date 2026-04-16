@@ -1,119 +1,90 @@
 package com.ghihin.epcubeoptimizer.domain.usecase
 
-import com.ghihin.epcubeoptimizer.domain.model.UserSchedule
+import com.ghihin.epcubeoptimizer.calendar.DailySchedule
 import com.ghihin.epcubeoptimizer.domain.model.WeatherForecast
+import com.ghihin.epcubeoptimizer.domain.repository.WeatherRepository
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Before
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.DayOfWeek
 import java.time.LocalDate
 
 class CalculateTargetSocUseCaseTest {
 
-    private lateinit var useCase: CalculateTargetSocUseCase
-    private val targetDate = LocalDate.of(2026, 3, 26) // Thursday
-
-    @Before
-    fun setup() {
-        val fakeRepo = object : com.ghihin.epcubeoptimizer.domain.repository.WeatherRepository {
-            override suspend fun getWeatherForecast(lat: Double, lon: Double): Result<WeatherForecast> = Result.failure(Exception())
-            override suspend fun getWeatherForecast(date: LocalDate): WeatherForecast = throw Exception()
+    private fun setupUseCase(mockForecast: Result<WeatherForecast>?): CalculateTargetSocUseCase {
+        val fakeRepo = object : WeatherRepository {
+            override suspend fun getWeatherForecast(lat: Double, lon: Double): Result<WeatherForecast> = mockForecast ?: Result.failure(Exception())
+            override suspend fun getWeatherForecast(date: LocalDate): WeatherForecast = mockForecast?.getOrNull() ?: throw Exception()
         }
-        useCase = CalculateTargetSocUseCase(fakeRepo)
-    }
-
-    // --- 晴れ (Sunny) のテスト ---
-    // 条件: cloudiness <= 30 かつ pop < 0.2
-    // 冬(3月) の場合: 在宅100%, 出社70%
-
-    @Test
-    fun `晴れ かつ 在宅日 の場合、SOCは100%になること`() {
-        val forecast = WeatherForecast(targetDate, cloudiness = 20, probabilityOfPrecipitation = 0.1f)
-        val schedule = UserSchedule(defaultWeeklySchedule = mapOf(DayOfWeek.THURSDAY to false)) // 在宅
-
-        val result = useCase(forecast, schedule, targetDate)
-
-        assertEquals(100, result.value)
-        assertEquals(20, result.factors.cloudiness)
-        assertEquals(0.1f, result.factors.pop)
-        assertEquals(false, result.factors.isCommuteDay)
+        return CalculateTargetSocUseCase(fakeRepo)
     }
 
     @Test
-    fun `晴れ かつ 出社日 の場合、SOCは70%になること`() {
-        val forecast = WeatherForecast(targetDate, cloudiness = 30, probabilityOfPrecipitation = 0.19f)
-        val schedule = UserSchedule(defaultWeeklySchedule = mapOf(DayOfWeek.THURSDAY to true)) // 出社
-
-        val result = useCase(forecast, schedule, targetDate)
-
-        assertEquals(70, result.value)
-        assertEquals(true, result.factors.isCommuteDay)
-    }
-
-    // --- 雨・曇り (Not Sunny) のテスト ---
-    // 冬の場合: 在宅100%, 出社90%
-
-    @Test
-    fun `雨(cloudiness大) かつ 在宅日 の場合、SOCは100%になること`() {
-        val forecast = WeatherForecast(targetDate, cloudiness = 76, probabilityOfPrecipitation = 0.1f)
-        val schedule = UserSchedule(defaultWeeklySchedule = mapOf(DayOfWeek.THURSDAY to false)) // 在宅
-
-        val result = useCase(forecast, schedule, targetDate)
-
-        assertEquals(100, result.value)
+    fun `APIエラー時のフォールバック - 目標SOC100パーセントのスマートモード`() = runBlocking {
+        val useCase = setupUseCase(Result.failure(Exception("API Error")))
+        val schedule = DailySchedule(date = LocalDate.of(2026, 5, 20), isCommute = true)
+        
+        val result = useCase(schedule)
+        assertEquals(100, result.targetSoc)
+        assertFalse(result.isSunnyTomorrow)
     }
 
     @Test
-    fun `雨(pop大) かつ 在宅日 の場合、SOCは100%になること`() {
-        val forecast = WeatherForecast(targetDate, cloudiness = 20, probabilityOfPrecipitation = 0.5f)
-        val schedule = UserSchedule(defaultWeeklySchedule = mapOf(DayOfWeek.THURSDAY to false)) // 在宅
-
-        val result = useCase(forecast, schedule, targetDate)
-
-        assertEquals(100, result.value)
+    fun `中間期・晴れの場合 - グリーンモード(60パーセント)・スケジュール問わず`() = runBlocking {
+        val date = LocalDate.of(2026, 5, 20) // 中間期
+        val forecast = Result.success(WeatherForecast(date, shortwaveRadiationSum = 4500.0))
+        val useCase = setupUseCase(forecast)
+        
+        // 出社
+        val resultCommute = useCase(DailySchedule(date, isCommute = true))
+        assertEquals(60, resultCommute.targetSoc)
+        assertTrue(resultCommute.isSunnyTomorrow)
+        
+        // 在宅
+        val resultHome = useCase(DailySchedule(date, isCommute = false))
+        assertEquals(60, resultHome.targetSoc)
+        assertTrue(resultHome.isSunnyTomorrow)
     }
 
     @Test
-    fun `雨 かつ 出社日 の場合、SOCは90%になること`() {
-        val forecast = WeatherForecast(targetDate, cloudiness = 80, probabilityOfPrecipitation = 0.6f)
-        val schedule = UserSchedule(defaultWeeklySchedule = mapOf(DayOfWeek.THURSDAY to true)) // 出社
+    fun `中間期・くもりの場合 - 在宅70パーセント、出社60パーセント`() = runBlocking {
+        val date = LocalDate.of(2026, 5, 20) // 中間期
+        val forecast = Result.success(WeatherForecast(date, shortwaveRadiationSum = 2500.0)) // THRESHOLD_CLOUDY と THRESHOLD_SUNNY の間
+        val useCase = setupUseCase(forecast)
+        
+        val resultHome = useCase(DailySchedule(date, isCommute = false))
+        assertEquals(70, resultHome.targetSoc)
+        assertFalse(resultHome.isSunnyTomorrow)
 
-        val result = useCase(forecast, schedule, targetDate)
-
-        assertEquals(90, result.value)
+        val resultCommute = useCase(DailySchedule(date, isCommute = true))
+        assertEquals(60, resultCommute.targetSoc)
     }
 
     @Test
-    fun `曇り かつ 在宅日 の場合、SOCは100%になること`() {
-        val forecast = WeatherForecast(targetDate, cloudiness = 50, probabilityOfPrecipitation = 0.3f)
-        val schedule = UserSchedule(defaultWeeklySchedule = mapOf(DayOfWeek.THURSDAY to false)) // 在宅
+    fun `冬季・悪天候の場合 - 在宅100パーセント、出社90パーセント`() = runBlocking {
+        val date = LocalDate.of(2026, 1, 15) // 冬季
+        val forecast = Result.success(WeatherForecast(date, shortwaveRadiationSum = 1000.0)) // 悪天候
+        val useCase = setupUseCase(forecast)
+        
+        val resultHome = useCase(DailySchedule(date, isCommute = false))
+        assertEquals(100, resultHome.targetSoc)
 
-        val result = useCase(forecast, schedule, targetDate)
-
-        assertEquals(100, result.value)
+        val resultCommute = useCase(DailySchedule(date, isCommute = true))
+        assertEquals(90, resultCommute.targetSoc)
     }
 
     @Test
-    fun `曇り かつ 出社日 の場合、SOCは90%になること`() {
-        val forecast = WeatherForecast(targetDate, cloudiness = 75, probabilityOfPrecipitation = 0.49f)
-        val schedule = UserSchedule(defaultWeeklySchedule = mapOf(DayOfWeek.THURSDAY to true)) // 出社
+    fun `夏季・晴れの場合 - 在宅80パーセント、出社60パーセント`() = runBlocking {
+        val date = LocalDate.of(2026, 8, 10) // 夏季
+        val forecast = Result.success(WeatherForecast(date, shortwaveRadiationSum = 5000.0)) // 晴れ
+        val useCase = setupUseCase(forecast)
+        
+        val resultHome = useCase(DailySchedule(date, isCommute = false))
+        assertEquals(80, resultHome.targetSoc)
+        assertTrue(resultHome.isSunnyTomorrow)
 
-        val result = useCase(forecast, schedule, targetDate)
-
-        assertEquals(90, result.value)
-    }
-
-    // --- 下限値のテスト ---
-
-    @Test
-    fun `計算結果が60%を下回る場合、下限値の60%に補正されること`() {
-        // 例: 秋の晴れ出社で60%
-        val autumnDate = LocalDate.of(2026, 11, 26)
-        val forecast = WeatherForecast(autumnDate, cloudiness = 0, probabilityOfPrecipitation = 0.0f)
-        val schedule = UserSchedule(defaultWeeklySchedule = mapOf(DayOfWeek.THURSDAY to true))
-
-        val result = useCase(forecast, schedule, autumnDate)
-
-        assertEquals(60, result.value)
+        val resultCommute = useCase(DailySchedule(date, isCommute = true))
+        assertEquals(60, resultCommute.targetSoc)
     }
 }

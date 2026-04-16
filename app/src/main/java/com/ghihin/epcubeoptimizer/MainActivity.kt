@@ -154,8 +154,7 @@ class MainActivity : ComponentActivity() {
                     preExecSoc = preExecSoc,
                     preExecMode = preExecMode,
                     weatherDescription = "(手動テスト実行)",
-                    cloudiness = null,
-                    precipitationProbability = null
+                    shortwaveRadiationSum = null
                 )
                 
                 lifecycleScope.launch {
